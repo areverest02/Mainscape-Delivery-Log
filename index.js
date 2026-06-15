@@ -162,8 +162,7 @@ app.post('/api/invoices', async (req, res) => {
         Status: 'DRAFT',
         Contact: contactId ? { ContactID: contactId } : { Name: contactName },
         Reference: jobAddress,
-        LineItems: lineItems,
-        LineAmountTypes: 'NONE'
+        LineItems: lineItems
       }]
     };
     console.log('Creating invoice:', JSON.stringify(invoiceData));
