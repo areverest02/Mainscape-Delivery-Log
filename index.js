@@ -167,14 +167,30 @@ app.post('/api/invoices', async (req, res) => {
     const { access_token, tenant_id } = await getValidToken();
     const { contactId, contactName, deliveries, jobAddress } = req.body;
     const lineItems = [];
+
     for (const d of deliveries) {
+      // Product line items with optional discount
       for (const li of (d.lineItems || [])) {
-        lineItems.push({ Description: li.desc, Quantity: li.qty, UnitAmount: li.price });
+        const item = {
+          Description: li.desc,
+          Quantity: li.qty,
+          UnitAmount: li.price
+        };
+        if (li.discount && li.discount > 0) {
+          item.DiscountRate = li.discount;
+        }
+        lineItems.push(item);
       }
-      if (d.zoneFee > 0) {
-        lineItems.push({ Description: `Delivery - ${d.zone} (${d.truck})`, Quantity: 1, UnitAmount: d.zoneFee });
+      // Delivery fee as separate line item (no discount)
+      if (d.zoneFee > 0 && d.deliveryType === 'delivered') {
+        lineItems.push({
+          Description: d.zoneProductDesc || `Delivery - ${d.zone} (${d.truck})`,
+          Quantity: 1,
+          UnitAmount: d.zoneFee
+        });
       }
     }
+
     const invoiceData = {
       Invoices: [{
         Type: 'ACCREC',
@@ -184,12 +200,15 @@ app.post('/api/invoices', async (req, res) => {
         LineItems: lineItems
       }]
     };
+
+    console.log('Creating invoice:', JSON.stringify(invoiceData));
     const response = await axios.post('https://api.xero.com/api.xro/2.0/Invoices',
       invoiceData,
       { headers: { Authorization: `Bearer ${access_token}`, 'Xero-tenant-id': tenant_id, 'Content-Type': 'application/json', Accept: 'application/json' } }
     );
     const inv = response.data.Invoices?.[0];
     if (inv?.HasErrors) {
+      console.error('Invoice validation errors:', JSON.stringify(inv.ValidationErrors));
       return res.status(500).json({ error: inv.ValidationErrors?.[0]?.Message || 'Validation error' });
     }
     res.json({ invoiceId: inv.InvoiceID, invoiceNumber: inv.InvoiceNumber });
