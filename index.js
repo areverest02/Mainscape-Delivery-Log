@@ -34,7 +34,10 @@ async function getTokens() {
     const result = await db.query('SELECT * FROM xero_tokens WHERE id=1');
     await db.end();
     return result.rows[0] || null;
-  } catch { return null; }
+  } catch (e) {
+    console.error('getTokens error:', e.message);
+    return null;
+  }
 }
 
 async function getValidToken() {
@@ -53,7 +56,8 @@ async function getValidToken() {
     );
     await saveTokens(refreshRes.data.access_token, refreshRes.data.refresh_token, tokens.tenant_id);
     return { access_token: refreshRes.data.access_token, tenant_id: tokens.tenant_id };
-  } catch {
+  } catch (e) {
+    console.error('Refresh error:', e.response?.data || e.message);
     return { access_token: tokens.access_token, tenant_id: tokens.tenant_id };
   }
 }
@@ -100,7 +104,7 @@ app.get('/auth/logout', async (req, res) => {
     const db = await getDb();
     await db.query('DELETE FROM xero_tokens WHERE id=1');
     await db.end();
-  } catch {}
+  } catch (e) {}
   res.json({ ok: true });
 });
 
@@ -118,6 +122,7 @@ app.get('/api/contacts/search', async (req, res) => {
     }));
     res.json({ contacts });
   } catch (err) {
+    console.error('Contact search error:', err.response?.data || err.message);
     res.status(500).json({ error: 'Failed to search contacts' });
   }
 });
@@ -132,34 +137,50 @@ app.post('/api/contacts', async (req, res) => {
     );
     const c = response.data.Contacts?.[0];
     res.json({ id: c.ContactID, name: c.Name, phone, email });
-   } catch (err) {
-    console.error('Invoice error:', JSON.stringify(err.response?.data || err.message));
-    res.status(500).json({ error: err.response?.data?.Message || err.response?.data || 'Failed to create invoice' });
-  }
+  } catch (err) {
+    console.error('Create contact error:', err.response?.data || err.message);
+    res.status(500).json({ error: 'Failed to create contact' });
   }
 });
 
 app.post('/api/invoices', async (req, res) => {
   try {
     const { access_token, tenant_id } = await getValidToken();
-    const { contactId, deliveries, jobAddress } = req.body;
+    const { contactId, contactName, deliveries, jobAddress } = req.body;
     const lineItems = [];
     for (const d of deliveries) {
       for (const li of (d.lineItems || [])) {
-        lineItems.push({ Description: li.desc, Quantity: li.qty, UnitAmount: li.price, AccountCode: '200' });
+        lineItems.push({ Description: li.desc, Quantity: li.qty, UnitAmount: li.price });
       }
       if (d.zoneFee > 0) {
-        lineItems.push({ Description: `Delivery – ${d.zone} (${d.truck})`, Quantity: 1, UnitAmount: d.zoneFee, AccountCode: '200' });
+        lineItems.push({ Description: `Delivery - ${d.zone} (${d.truck})`, Quantity: 1, UnitAmount: d.zoneFee });
       }
     }
+    const invoiceData = {
+      Invoices: [{
+        Type: 'ACCREC',
+        Status: 'DRAFT',
+        Contact: contactId ? { ContactID: contactId } : { Name: contactName },
+        Reference: jobAddress,
+        LineItems: lineItems,
+        LineAmountTypes: 'EXCLUSIVE'
+      }]
+    };
+    console.log('Creating invoice:', JSON.stringify(invoiceData));
     const response = await axios.post('https://api.xero.com/api.xro/2.0/Invoices',
-      { Invoices: [{ Type: 'ACCREC', Status: 'DRAFT', Contact: { ContactID: contactId }, Reference: jobAddress, LineItems: lineItems, LineAmountTypes: 'EXCLUSIVE' }] },
+      invoiceData,
       { headers: { Authorization: `Bearer ${access_token}`, 'Xero-tenant-id': tenant_id, 'Content-Type': 'application/json', Accept: 'application/json' } }
     );
+    console.log('Invoice response:', JSON.stringify(response.data).substring(0, 500));
     const inv = response.data.Invoices?.[0];
+    if (inv?.HasErrors) {
+      console.error('Invoice validation errors:', JSON.stringify(inv.ValidationErrors));
+      return res.status(500).json({ error: inv.ValidationErrors?.[0]?.Message || 'Validation error' });
+    }
     res.json({ invoiceId: inv.InvoiceID, invoiceNumber: inv.InvoiceNumber });
   } catch (err) {
-    res.status(500).json({ error: 'Failed to create invoice' });
+    console.error('Invoice error:', err.response?.data || err.message);
+    res.status(500).json({ error: JSON.stringify(err.response?.data) || err.message || 'Failed to create invoice' });
   }
 });
 
