@@ -7,12 +7,12 @@ const path = require('path');
 const app = express();
 app.use(express.json());
 app.use(cors({ origin: true, credentials: true }));
-app.use(express.static(path.join(__dirname, '../../public')));
+app.use(express.static(path.join(__dirname, 'public')));
 
 const XERO_CLIENT_ID = process.env.XERO_CLIENT_ID;
 const XERO_CLIENT_SECRET = process.env.XERO_CLIENT_SECRET;
 const XERO_REDIRECT_URI = process.env.XERO_REDIRECT_URI;
-const XERO_SCOPES = 'app.connections accounting.contacts accounting.contacts.read accounting.invoices accounting.invoices.read';
+const XERO_SCOPES = 'accounting.contacts accounting.contacts.read accounting.invoices accounting.invoices.read';
 
 function setTokenCookie(res, data) {
   const val = JSON.stringify(data);
@@ -146,7 +146,7 @@ app.post('/api/invoices', async (req, res) => {
 });
 
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../../public/index.html'));
+  res.sendFile(path.join(__dirname, 'public/index.html'));
 });
 
 const PORT = process.env.PORT || 3000;
