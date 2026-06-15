@@ -167,30 +167,16 @@ app.post('/api/invoices', async (req, res) => {
     const { access_token, tenant_id } = await getValidToken();
     const { contactId, contactName, deliveries, jobAddress } = req.body;
     const lineItems = [];
-
     for (const d of deliveries) {
-      // Product line items with optional discount
       for (const li of (d.lineItems || [])) {
-        const item = {
-          Description: li.desc,
-          Quantity: li.qty,
-          UnitAmount: li.price
-        };
-        if (li.discount && li.discount > 0) {
-          item.DiscountRate = li.discount;
-        }
+        const item = { Description: li.desc, Quantity: li.qty, UnitAmount: li.price };
+        if (li.discount && li.discount > 0) item.DiscountRate = li.discount;
         lineItems.push(item);
       }
-      // Delivery fee as separate line item (no discount)
       if (d.zoneFee > 0 && d.deliveryType === 'delivered') {
-        lineItems.push({
-          Description: d.zoneProductDesc || `Delivery - ${d.zone} (${d.truck})`,
-          Quantity: 1,
-          UnitAmount: d.zoneFee
-        });
+        lineItems.push({ Description: d.zoneProductDesc || `Delivery - ${d.zone} (${d.truck})`, Quantity: 1, UnitAmount: d.zoneFee });
       }
     }
-
     const invoiceData = {
       Invoices: [{
         Type: 'ACCREC',
@@ -200,21 +186,40 @@ app.post('/api/invoices', async (req, res) => {
         LineItems: lineItems
       }]
     };
-
-    console.log('Creating invoice:', JSON.stringify(invoiceData));
     const response = await axios.post('https://api.xero.com/api.xro/2.0/Invoices',
       invoiceData,
       { headers: { Authorization: `Bearer ${access_token}`, 'Xero-tenant-id': tenant_id, 'Content-Type': 'application/json', Accept: 'application/json' } }
     );
     const inv = response.data.Invoices?.[0];
     if (inv?.HasErrors) {
-      console.error('Invoice validation errors:', JSON.stringify(inv.ValidationErrors));
       return res.status(500).json({ error: inv.ValidationErrors?.[0]?.Message || 'Validation error' });
     }
     res.json({ invoiceId: inv.InvoiceID, invoiceNumber: inv.InvoiceNumber });
   } catch (err) {
     console.error('Invoice error:', err.response?.data || err.message);
     res.status(500).json({ error: JSON.stringify(err.response?.data) || err.message || 'Failed to create invoice' });
+  }
+});
+
+// Check payment status of an invoice in Xero
+app.get('/api/invoice-status/:invoiceId', async (req, res) => {
+  try {
+    const { access_token, tenant_id } = await getValidToken();
+    const response = await axios.get(`https://api.xero.com/api.xro/2.0/Invoices/${req.params.invoiceId}`, {
+      headers: { Authorization: `Bearer ${access_token}`, 'Xero-tenant-id': tenant_id, Accept: 'application/json' }
+    });
+    const inv = response.data.Invoices?.[0];
+    if (!inv) return res.status(404).json({ error: 'Invoice not found' });
+    res.json({
+      status: inv.Status,
+      paid: inv.Status === 'PAID',
+      amountDue: inv.AmountDue,
+      amountPaid: inv.AmountPaid,
+      total: inv.Total
+    });
+  } catch (err) {
+    console.error('Invoice status error:', err.response?.data || err.message);
+    res.status(500).json({ error: 'Failed to check invoice status' });
   }
 });
 
