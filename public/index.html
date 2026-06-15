@@ -13,8 +13,8 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 .screen.active { display: block; }
 .header { background: #fff; border-bottom: 1px solid #e8e8e2; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 10; }
 .header img { height: 36px; }
-.nav { display: flex; background: #fff; border-bottom: 1px solid #e8e8e2; }
-.nav-btn { flex: 1; padding: 10px 4px; font-size: 12px; border: none; background: none; cursor: pointer; color: #888; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.nav { display: flex; background: #fff; border-bottom: 1px solid #e8e8e2; overflow-x: auto; }
+.nav-btn { flex: 1; min-width: 56px; padding: 10px 4px; font-size: 11px; border: none; background: none; cursor: pointer; color: #888; display: flex; flex-direction: column; align-items: center; gap: 3px; white-space: nowrap; }
 .nav-btn.active { color: #2d7a3a; border-bottom: 2px solid #2d7a3a; }
 .nav-btn i { font-size: 20px; }
 .content { padding: 16px; padding-bottom: 80px; }
@@ -27,6 +27,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 .btn-danger { color: #c0392b; border-color: #c0392b; }
 .btn-danger:hover { background: #fdf0f0; }
 .btn-xero { background: #1ab4d7; color: #fff; border-color: #1ab4d7; }
+.btn-eftpos { background: #f59e0b; color: #fff; border-color: #f59e0b; }
 .btn-full { width: 100%; justify-content: center; }
 .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .form-group { margin-bottom: 12px; }
@@ -37,6 +38,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: #2d7a3a
 .badge-pending { background: #fef3e2; color: #92400e; }
 .badge-done { background: #dcfce7; color: #166534; }
 .badge-invoiced { background: #dbeafe; color: #1e40af; }
+.badge-eftpos { background: #fef3c7; color: #92400e; }
 .badge-h300 { background: #e0f2fe; color: #0369a1; }
 .badge-h700 { background: #ede9fe; color: #5b21b6; }
 .badge-htt { background: #fce7f3; color: #9d174d; }
@@ -57,7 +59,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: #2d7a3a
 .alert-err { background: #fdf0f0; color: #c0392b; }
 .alert-ok { background: #f0fdf4; color: #166534; }
 .alert-info { background: #eff6ff; color: #1e40af; }
-.search-results { border: 1px solid #ddd; border-radius: 8px; margin-top: 4px; overflow: hidden; max-height: 200px; overflow-y: auto; }
+.search-results { border: 1px solid #ddd; border-radius: 8px; margin-top: 4px; overflow: hidden; max-height: 200px; overflow-y: auto; z-index: 50; background: #fff; }
 .search-result { padding: 10px 14px; cursor: pointer; border-bottom: 1px solid #f0f0ec; font-size: 14px; }
 .search-result:hover { background: #f5f5f0; }
 .search-result-name { font-weight: 600; }
@@ -78,31 +80,27 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: #2d7a3a
 .toggle-group { display: flex; background: #f5f5f0; border-radius: 8px; padding: 3px; margin-bottom: 12px; }
 .toggle-opt { flex: 1; text-align: center; padding: 8px; font-size: 14px; cursor: pointer; border-radius: 6px; border: none; background: none; color: #888; font-weight: 500; font-family: inherit; transition: all 0.15s; }
 .toggle-opt.active { background: #2d7a3a; color: #fff; }
-.product-row { display: flex; gap: 6px; align-items: center; margin-bottom: 8px; padding: 8px; background: #f9f9f7; border-radius: 8px; }
+.toggle-opt.active-amber { background: #f59e0b; color: #fff; }
+.product-row { display: flex; gap: 6px; align-items: flex-start; margin-bottom: 8px; padding: 10px; background: #f9f9f7; border-radius: 8px; flex-wrap: wrap; }
 .weight-bar { height: 6px; background: #e8e8e2; border-radius: 3px; margin: 6px 0; overflow: hidden; }
 .weight-fill { height: 100%; border-radius: 3px; background: #2d7a3a; transition: width 0.3s; }
 .weight-fill.warning { background: #f59e0b; }
 .weight-fill.danger { background: #ef4444; }
-/* Product search */
-.product-search-wrap { position: relative; }
-.product-search-input { width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 13px; font-family: inherit; }
-.product-dropdown { position: absolute; top: 100%; left: 0; right: 0; background: #fff; border: 1px solid #ddd; border-radius: 8px; max-height: 200px; overflow-y: auto; z-index: 100; box-shadow: 0 4px 12px rgba(0,0,0,0.1); display: none; }
+.product-dropdown { position: absolute; top: 100%; left: 0; right: 0; background: #fff; border: 1px solid #ddd; border-radius: 8px; max-height: 220px; overflow-y: auto; z-index: 200; box-shadow: 0 4px 12px rgba(0,0,0,0.12); display: none; }
 .product-option { padding: 10px 12px; cursor: pointer; border-bottom: 1px solid #f5f5f0; font-size: 13px; }
 .product-option:hover { background: #f0fdf4; }
-.product-option .price { font-size: 11px; color: #888; }
-/* Day sections */
+.product-option .sku { font-size: 11px; color: #aaa; }
 .day-section { margin-bottom: 8px; border: 1px solid #e8e8e2; border-radius: 12px; overflow: hidden; }
-.day-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; background: #f9f9f7; cursor: pointer; }
+.day-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; background: #f9f9f7; cursor: pointer; user-select: none; }
 .day-header h3 { font-size: 15px; font-weight: 600; }
-.day-header .day-count { font-size: 12px; color: #888; }
 .day-body { padding: 8px; display: none; }
 .day-body.open { display: block; }
-/* Week sections */
 .week-section { margin-bottom: 12px; border: 1px solid #e8e8e2; border-radius: 12px; overflow: hidden; }
-.week-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; background: #f9f9f7; cursor: pointer; }
+.week-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; background: #f9f9f7; cursor: pointer; user-select: none; }
 .week-header h3 { font-size: 14px; font-weight: 600; }
 .week-body { padding: 8px; display: none; }
 .week-body.open { display: block; }
+.discount-badge { background: #fef3c7; color: #92400e; font-size: 11px; padding: 2px 8px; border-radius: 100px; font-weight: 600; }
 </style>
 </head>
 <body>
@@ -136,6 +134,15 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: #2d7a3a
 
     <!-- NEW ORDER -->
     <div id="tab-orders" class="content">
+
+      <!-- Payment type -->
+      <div class="section-hdr">Payment type</div>
+      <div class="toggle-group">
+        <button class="toggle-opt active" id="toggle-invoice" onclick="setPaymentType('invoice')"><i class="ti ti-file-invoice"></i> Invoice (Xero)</button>
+        <button class="toggle-opt" id="toggle-eftpos" onclick="setPaymentType('eftpos')"><i class="ti ti-credit-card"></i> EFTPOS</button>
+      </div>
+
+      <!-- Customer -->
       <div class="section-hdr">Customer</div>
       <div class="card">
         <div class="form-group">
@@ -158,30 +165,44 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: #2d7a3a
         <button class="btn btn-sm" onclick="toggleNewContact()" id="new-contact-toggle"><i class="ti ti-user-plus"></i> Add new customer</button>
       </div>
 
+      <!-- Products -->
       <div class="section-hdr">Products</div>
       <div class="card">
+        <!-- Trade discount toggle -->
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;padding:10px;background:#fffbeb;border-radius:8px;border:1px solid #fcd34d">
+          <div>
+            <div style="font-size:13px;font-weight:600;color:#92400e">Trade discount (10%)</div>
+            <div style="font-size:12px;color:#b45309">Applies to products only, shown on Xero invoice</div>
+          </div>
+          <button id="discount-toggle" onclick="toggleDiscount()" style="padding:6px 14px;border-radius:20px;border:1px solid #fcd34d;background:#fff;font-size:13px;font-weight:600;color:#92400e;cursor:pointer;font-family:inherit">Off</button>
+        </div>
         <div id="products-loading" class="muted" style="text-align:center;padding:12px">Loading products from Xero...</div>
         <div id="product-rows" style="display:none"></div>
-        <button class="btn btn-sm" onclick="addProductRow()" id="add-product-btn" style="display:none"><i class="ti ti-plus"></i> Add product</button>
+        <button class="btn btn-sm" onclick="addProductRow()" id="add-product-btn" style="display:none;margin-top:4px"><i class="ti ti-plus"></i> Add product</button>
         <div id="weight-summary" style="display:none;margin-top:12px;padding:10px;background:#f0fdf4;border-radius:8px">
           <div style="font-size:13px;color:#166534;margin-bottom:4px" id="weight-text"></div>
           <div class="weight-bar"><div class="weight-fill" id="weight-fill" style="width:0%"></div></div>
+          <div id="truck-rec" style="display:none;font-size:12px;color:#166534;margin-top:4px"></div>
         </div>
       </div>
 
+      <!-- Delivery type -->
       <div class="section-hdr">Delivery type</div>
       <div class="toggle-group">
         <button class="toggle-opt active" id="toggle-delivered" onclick="setDeliveryType('delivered')"><i class="ti ti-truck"></i> Delivered</button>
         <button class="toggle-opt" id="toggle-exyard" onclick="setDeliveryType('exyard')"><i class="ti ti-building-warehouse"></i> Ex Yard</button>
       </div>
 
+      <!-- Delivery details -->
       <div id="delivery-details">
         <div class="section-hdr">Delivery details</div>
         <div class="card">
           <div class="form-group">
             <label>Delivery address</label>
-            <input type="text" id="job-address" placeholder="Start typing address..." oninput="onAddressInput()" autocomplete="off">
-            <div id="address-suggestions" class="search-results" style="display:none"></div>
+            <div style="position:relative">
+              <input type="text" id="job-address" placeholder="Start typing address..." oninput="onAddressInput()" autocomplete="off">
+              <div id="address-suggestions" class="search-results" style="display:none;position:absolute;left:0;right:0;top:100%;z-index:100"></div>
+            </div>
             <div id="zone-result" style="margin-top:6px;display:none"></div>
           </div>
           <div class="form-group">
@@ -193,32 +214,20 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: #2d7a3a
               <option value="Hino 700 Truck and Trailer">Hino 700 Truck and Trailer (up to 30T)</option>
             </select>
           </div>
-          <div id="truck-rec" style="display:none;font-size:13px;padding:8px;background:#f0fdf4;border-radius:8px;color:#166534;margin-bottom:10px"></div>
           <div class="row">
-            <div class="form-group">
-              <label>Date</label>
-              <input type="date" id="delivery-date">
-            </div>
-            <div class="form-group">
-              <label>Time slot</label>
-              <input type="time" id="delivery-time" value="09:00">
-            </div>
+            <div class="form-group"><label>Date</label><input type="date" id="delivery-date"></div>
+            <div class="form-group"><label>Time</label><input type="time" id="delivery-time" value="09:00"></div>
           </div>
         </div>
       </div>
 
+      <!-- Ex yard details -->
       <div id="exyard-details" style="display:none">
-        <div class="section-hdr">Ex Yard details</div>
+        <div class="section-hdr">Ex yard details</div>
         <div class="card">
           <div class="row">
-            <div class="form-group">
-              <label>Date</label>
-              <input type="date" id="exyard-date">
-            </div>
-            <div class="form-group">
-              <label>Time slot</label>
-              <input type="time" id="exyard-time" value="09:00">
-            </div>
+            <div class="form-group"><label>Date</label><input type="date" id="exyard-date"></div>
+            <div class="form-group"><label>Time</label><input type="time" id="exyard-time" value="09:00"></div>
           </div>
         </div>
       </div>
@@ -251,7 +260,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: #2d7a3a
     <!-- INVOICE -->
     <div id="tab-invoice" class="content" style="display:none">
       <div class="section-hdr">Select deliveries to invoice</div>
-      <p class="muted" style="margin-bottom:12px;font-size:13px">Tap deliveries for the same customer then create one Xero invoice.</p>
+      <p class="muted" style="margin-bottom:12px;font-size:13px">Tap deliveries to select, then create one Xero invoice. EFTPOS orders are excluded.</p>
       <div id="invoice-list"></div>
       <div id="invoice-summary" style="display:none">
         <div class="card" style="background:#f0fdf4;border-color:#86efac">
@@ -282,35 +291,61 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: #2d7a3a
 </div>
 
 <script>
-const ZONES=[
-  {name:'Zone 1',areas:['lincoln','springston','greenpark'],mini:40,big:52},
-  {name:'Zone 2',areas:['rolleston','prebbleton','hornby','taitapu','wigram','halswell','motukara'],mini:65,big:104},
-  {name:'Zone 3',areas:['west melton','dunsandel','kirwee','darfield','rakaia','leeston','avonhead','yaldhurst','ilam','hoon hay'],mini:74,big:139},
-  {name:'Zone 4',areas:['cashmere','woolston','harewood','bishopdale','casebrook'],mini:78,big:165},
-  {name:'Zone 5',areas:['marshland','parklands','burwood','new brighton','bromley'],mini:111,big:175}
+// ===== ZONES =====
+const ZONES = [
+  { name:'Zone 1', areas:['lincoln','springston','greenpark','ladbrooks','prebbleton'], mini:55, big:75 },
+  { name:'Zone 2', areas:['rolleston','hornby','taitapu','wigram','halswell','motukara','templeton','islington','sockburn'], mini:74, big:100 },
+  { name:'Zone 3', areas:['west melton','kirwee','leeston','avonhead','yaldhurst','ilam','hoon hay','riccarton','upper riccarton','addington','spreydon','hillmorton','beckenham','st martins','church corner','russley'], mini:103, big:143 },
+  { name:'Zone 4', areas:['cashmere','woolston','harewood','bishopdale','casebrook','papanui','merivale','st albans','sydenham','edgeware','shirley','belfast','redwood','northwood','burnside','bryndwr','fendalton','strowan','central city','city centre'], mini:120, big:175 },
+  { name:'Zone 5', areas:['marshland','parklands','burwood','new brighton','bromley','aranui','wainoni','dallington','bexley','waltham','linwood','richmond','phillipstown'], mini:150, big:205 },
 ];
-const TRUCKS=[{name:'Hino 300',maxT:6},{name:'Hino 700',maxT:12},{name:'Hino 700 Truck and Trailer',maxT:30}];
-const DAYS=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-const SCOOP_TO_M3=1/3;
-let PRODUCTS=[];
-const CONV_RATES={'chip':1.5,'schist':1.5,'pebble':1.6,'aggregate':1.65,'ap20':1.65,'ap40':1.75,'crusher':1.5,'premix':1.7,'rounds':1.6,'tailings':1.6,'sand':1.55,'soil':1.2,'compost':1.2,'vege':1.2,'garden':1.2,'topdress':1.2,'living earth':1.2};
-function getConvRate(n){const nl=n.toLowerCase();for(const [k,v] of Object.entries(CONV_RATES)){if(nl.includes(k))return v;}return null;}
 
-let deliveries=JSON.parse(localStorage.getItem('ms_dlv')||'[]');
-let nextId=parseInt(localStorage.getItem('ms_nid')||'1');
-let currentContact=null,deliveryType='delivered',driverFilter='Hino 300',deliveryFilter='all',selectedForInvoice=new Set();
-let productRows=[{sku:'',qty:1,unit:'m3',searchText:''}];
-function save(){localStorage.setItem('ms_dlv',JSON.stringify(deliveries));localStorage.setItem('ms_nid',String(nextId));}
+// Soil delivery zones (from Xero product codes)
+const SOIL_ZONES = [
+  { name:'Zone 1', areas:['lincoln','springston','greenpark','ladbrooks','prebbleton'], mini:73.91, big:100 },
+  { name:'Zone 2', areas:['rolleston','hornby','taitapu','wigram','halswell','motukara','templeton','islington','sockburn'], mini:103, big:143 },
+  { name:'Zone 3', areas:['west melton','kirwee','leeston','avonhead','yaldhurst','ilam','hoon hay','riccarton','upper riccarton','addington','spreydon','hillmorton','beckenham','st martins','church corner','russley'], mini:120, big:175 },
+  { name:'Zone 4', areas:['cashmere','woolston','harewood','bishopdale','casebrook','papanui','merivale','st albans','sydenham','edgeware','shirley','belfast','redwood','northwood','burnside','bryndwr','fendalton','strowan','central city','city centre'], mini:150, big:205 },
+  { name:'Zone 5', areas:['marshland','parklands','burwood','new brighton','bromley','aranui','wainoni','dallington','bexley','waltham','linwood','richmond','phillipstown'], mini:185, big:240 },
+];
 
-// Set today's date as default
+const TRUCKS = [{name:'Hino 300',maxT:6},{name:'Hino 700',maxT:12},{name:'Hino 700 Truck and Trailer',maxT:30}];
+const DAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const SCOOP_TO_M3 = 1/3;
+const CONV_RATES = {'chip':1.5,'schist':1.5,'pebble':1.6,'ap20':1.65,'ap40':1.75,'crusher':1.5,'premix':1.7,'rounds':1.6,'tailings':1.6,'sand':1.55,'soil':1.2,'compost':1.2,'vege':1.2,'garden':1.2,'topdress':1.2,'living earth':1.2};
+
+function getConvRate(n){ const nl=n.toLowerCase(); for(const [k,v] of Object.entries(CONV_RATES)){if(nl.includes(k))return v;} return null; }
+function isSoilProduct(name){ return name.toLowerCase().includes('soil'); }
+
+let PRODUCTS = [];
+let deliveries = JSON.parse(localStorage.getItem('ms_dlv')||'[]');
+let nextId = parseInt(localStorage.getItem('ms_nid')||'1');
+let currentContact = null;
+let deliveryType = 'delivered';
+let paymentType = 'invoice';
+let tradeDiscount = false;
+let driverFilter = 'Hino 300';
+let deliveryFilter = 'all';
+let selectedForInvoice = new Set();
+let productRows = [{sku:'',qty:1,unit:'m3',customPrice:null,searchText:''}];
+
+function save(){ localStorage.setItem('ms_dlv',JSON.stringify(deliveries)); localStorage.setItem('ms_nid',String(nextId)); }
+
 function setDefaultDate(){
-  const today=new Date().toISOString().split('T')[0];
-  document.getElementById('delivery-date').value=today;
-  document.getElementById('exyard-date').value=today;
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('delivery-date').value = today;
+  document.getElementById('exyard-date').value = today;
 }
 
 async function loadProducts(){
-  try{const r=await fetch('/api/products',{credentials:'include'});const d=await r.json();if(d.products&&d.products.length){PRODUCTS=d.products;if(!productRows[0].sku&&PRODUCTS.length)productRows[0].sku=PRODUCTS[0].sku;}}catch(e){}
+  try{
+    const r = await fetch('/api/products',{credentials:'include'});
+    const d = await r.json();
+    if(d.products && d.products.length){
+      PRODUCTS = d.products;
+      if(!productRows[0].sku && PRODUCTS.length) productRows[0].sku = PRODUCTS[0].sku;
+    }
+  }catch(e){}
   document.getElementById('products-loading').style.display='none';
   document.getElementById('product-rows').style.display='block';
   document.getElementById('add-product-btn').style.display='inline-flex';
@@ -318,141 +353,248 @@ async function loadProducts(){
 }
 
 async function checkAuth(){
-  try{const r=await fetch('/auth/status',{credentials:'include'});const d=await r.json();if(d.connected){showApp();}else{const p=new URLSearchParams(window.location.search);if(p.get('error')){document.getElementById('login-msg').textContent='Connection failed.';document.getElementById('login-msg').style.display='block';}document.getElementById('screen-login').classList.add('active');}}catch{document.getElementById('screen-login').classList.add('active');}
+  try{
+    const r=await fetch('/auth/status',{credentials:'include'});
+    const d=await r.json();
+    if(d.connected){showApp();}
+    else{
+      const p=new URLSearchParams(window.location.search);
+      if(p.get('error')){document.getElementById('login-msg').textContent='Connection failed.';document.getElementById('login-msg').style.display='block';}
+      document.getElementById('screen-login').classList.add('active');
+    }
+  }catch{document.getElementById('screen-login').classList.add('active');}
 }
-function connectXero(){window.location.href='/auth/xero';}
-function showApp(){document.getElementById('screen-login').classList.remove('active');document.getElementById('screen-app').classList.add('active');setDefaultDate();loadProducts();renderDeliveries();renderInvoiceList();renderDriverList();renderArchive();updateStats();}
-async function logout(){await fetch('/auth/logout',{credentials:'include'});window.location.reload();}
-function showTab(tab){['orders','deliveries','invoice','driver','archive'].forEach(t=>{document.getElementById('tab-'+t).style.display=t===tab?'block':'none';document.getElementById('nav-'+t).classList.toggle('active',t===tab);});if(tab==='deliveries')renderDeliveries();if(tab==='invoice')renderInvoiceList();if(tab==='driver')renderDriverList();if(tab==='archive')renderArchive();}
-function setDeliveryType(type){deliveryType=type;document.getElementById('toggle-delivered').classList.toggle('active',type==='delivered');document.getElementById('toggle-exyard').classList.toggle('active',type==='exyard');document.getElementById('delivery-details').style.display=type==='delivered'?'block':'none';document.getElementById('exyard-details').style.display=type==='exyard'?'block':'none';}
-
-// Product search
-function renderProductRows(){
-  if(!PRODUCTS.length)return;
-  const el=document.getElementById('product-rows');
-  el.innerHTML=productRows.map((row,i)=>{
-    const p=PRODUCTS.find(x=>x.sku===row.sku);
-    return`<div class="product-row" style="flex-wrap:wrap;gap:6px">
-      <div style="flex:1;min-width:200px;position:relative">
-        <input type="text" class="product-search-input" placeholder="Search product..." value="${row.searchText||p?.name||''}" oninput="filterProducts(${i},this.value)" onfocus="showProductDropdown(${i})" style="width:100%;font-size:13px">
-        <div id="pdrop-${i}" class="product-dropdown"></div>
-      </div>
-      <input type="number" style="width:65px;margin:0;font-size:13px;flex-shrink:0" min="0.1" step="0.1" value="${row.qty}" onchange="updateProductQty(${i},this.value)">
-      <div style="display:flex;border:1px solid #ddd;border-radius:8px;overflow:hidden;flex-shrink:0">
-        <button style="padding:6px 8px;font-size:12px;border:none;background:${row.unit==='m3'?'#2d7a3a':'#fff'};color:${row.unit==='m3'?'#fff':'#888'};cursor:pointer;font-family:inherit" onclick="setUnit(${i},'m3')">m3</button>
-        <button style="padding:6px 8px;font-size:12px;border:none;background:${row.unit==='scoop'?'#2d7a3a':'#fff'};color:${row.unit==='scoop'?'#fff':'#888'};cursor:pointer;font-family:inherit" onclick="setUnit(${i},'scoop')">Scoop</button>
-      </div>
-      ${productRows.length>1?`<button style="padding:5px 8px;font-size:12px;border:1px solid #c0392b;border-radius:8px;background:#fff;color:#c0392b;cursor:pointer;flex-shrink:0" onclick="removeProductRow(${i})"><i class="ti ti-x"></i></button>`:''}
-      ${p?`<div style="font-size:12px;color:#888;width:100%;padding:0 2px">$${p.price} ea · ${p.name}</div>`:''}
-    </div>`;
-  }).join('');
-  updateWeightSummary();
-  // Close dropdowns on outside click
-  document.addEventListener('click',closeAllDropdowns,{once:true});
+function connectXero(){ window.location.href='/auth/xero'; }
+function showApp(){
+  document.getElementById('screen-login').classList.remove('active');
+  document.getElementById('screen-app').classList.add('active');
+  setDefaultDate(); loadProducts(); renderDeliveries(); renderInvoiceList(); renderDriverList(); renderArchive(); updateStats();
+}
+async function logout(){ await fetch('/auth/logout',{credentials:'include'}); window.location.reload(); }
+function showTab(tab){
+  ['orders','deliveries','invoice','driver','archive'].forEach(t=>{
+    document.getElementById('tab-'+t).style.display=t===tab?'block':'none';
+    document.getElementById('nav-'+t).classList.toggle('active',t===tab);
+  });
+  if(tab==='deliveries') renderDeliveries();
+  if(tab==='invoice') renderInvoiceList();
+  if(tab==='driver') renderDriverList();
+  if(tab==='archive') renderArchive();
 }
 
-function filterProducts(i,val){
-  productRows[i].searchText=val;
-  const filtered=PRODUCTS.filter(p=>p.name.toLowerCase().includes(val.toLowerCase())||p.sku.toLowerCase().includes(val.toLowerCase())).slice(0,20);
-  const drop=document.getElementById('pdrop-'+i);
-  if(!filtered.length){drop.style.display='none';return;}
-  drop.innerHTML=filtered.map(p=>`<div class="product-option" onclick="selectProduct(${i},'${p.sku}')"><div>${p.name}</div><div class="price">SKU: ${p.sku} · $${p.price}</div></div>`).join('');
-  drop.style.display='block';
+// ===== PAYMENT & DELIVERY TYPE =====
+function setPaymentType(type){
+  paymentType = type;
+  document.getElementById('toggle-invoice').className = 'toggle-opt' + (type==='invoice'?' active':'');
+  document.getElementById('toggle-eftpos').className = 'toggle-opt' + (type==='eftpos'?' active-amber':'');
+}
+function setDeliveryType(type){
+  deliveryType = type;
+  document.getElementById('toggle-delivered').classList.toggle('active',type==='delivered');
+  document.getElementById('toggle-exyard').classList.toggle('active',type==='exyard');
+  document.getElementById('delivery-details').style.display = type==='delivered'?'block':'none';
+  document.getElementById('exyard-details').style.display = type==='exyard'?'block':'none';
 }
 
-function showProductDropdown(i){
-  const row=productRows[i];
-  const val=row.searchText||'';
-  filterProducts(i,val);
-}
-
-function selectProduct(i,sku){
-  const p=PRODUCTS.find(x=>x.sku===sku);
-  productRows[i].sku=sku;
-  productRows[i].searchText=p?p.name:'';
-  const drop=document.getElementById('pdrop-'+i);
-  if(drop)drop.style.display='none';
+// ===== TRADE DISCOUNT =====
+function toggleDiscount(){
+  tradeDiscount = !tradeDiscount;
+  const btn = document.getElementById('discount-toggle');
+  btn.textContent = tradeDiscount ? 'On — 10% off' : 'Off';
+  btn.style.background = tradeDiscount ? '#fef3c7' : '#fff';
   renderProductRows();
 }
 
-function closeAllDropdowns(){
-  document.querySelectorAll('.product-dropdown').forEach(d=>d.style.display='none');
+// ===== PRODUCTS =====
+function renderProductRows(){
+  if(!PRODUCTS.length) return;
+  const el = document.getElementById('product-rows');
+  const hasSoil = productRows.some(r=>{ const p=PRODUCTS.find(x=>x.sku===r.sku); return p&&isSoilProduct(p.name); });
+  el.innerHTML = productRows.map((row,i)=>{
+    const p = PRODUCTS.find(x=>x.sku===row.sku);
+    const basePrice = row.customPrice !== null ? row.customPrice : (p ? p.price : 0);
+    const discountedPrice = tradeDiscount ? +(basePrice * 0.9).toFixed(2) : basePrice;
+    return `<div class="product-row">
+      <div style="width:100%;position:relative">
+        <input type="text" placeholder="Search product..." value="${row.searchText||p?.name||''}" oninput="filterProducts(${i},this.value)" onfocus="showProductDropdown(${i})" style="width:100%;font-size:13px;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-family:inherit">
+        <div id="pdrop-${i}" class="product-dropdown"></div>
+      </div>
+      <div style="display:flex;gap:6px;align-items:center;width:100%;margin-top:6px">
+        <input type="number" style="width:70px;font-size:13px" min="0.1" step="0.1" value="${row.qty}" onchange="updateProductQty(${i},this.value)" placeholder="Qty">
+        <div style="display:flex;border:1px solid #ddd;border-radius:8px;overflow:hidden">
+          <button style="padding:6px 8px;font-size:12px;border:none;background:${row.unit==='m3'?'#2d7a3a':'#fff'};color:${row.unit==='m3'?'#fff':'#888'};cursor:pointer;font-family:inherit" onclick="setUnit(${i},'m3')">m3</button>
+          <button style="padding:6px 8px;font-size:12px;border:none;background:${row.unit==='scoop'?'#2d7a3a':'#fff'};color:${row.unit==='scoop'?'#fff':'#888'};cursor:pointer;font-family:inherit" onclick="setUnit(${i},'scoop')">Scoop</button>
+        </div>
+        <div style="flex:1">
+          <label style="font-size:11px;margin-bottom:2px">Unit price $</label>
+          <input type="number" style="font-size:13px" min="0" step="0.01" value="${basePrice}" onchange="updateCustomPrice(${i},this.value)" placeholder="Price">
+        </div>
+        ${tradeDiscount?`<span class="discount-badge">-10% = $${discountedPrice}</span>`:''}
+        ${productRows.length>1?`<button style="padding:5px 8px;font-size:12px;border:1px solid #c0392b;border-radius:8px;background:#fff;color:#c0392b;cursor:pointer;flex-shrink:0" onclick="removeProductRow(${i})"><i class="ti ti-x"></i></button>`:''}
+      </div>
+    </div>`;
+  }).join('');
+  updateWeightSummary();
 }
 
-function addProductRow(){productRows.push({sku:PRODUCTS[0]?.sku||'',qty:1,unit:'m3',searchText:''});renderProductRows();}
-function removeProductRow(i){productRows.splice(i,1);renderProductRows();}
-function updateProductQty(i,val){productRows[i].qty=parseFloat(val)||1;updateWeightSummary();}
-function setUnit(i,unit){productRows[i].unit=unit;renderProductRows();}
-function getM3(row){return row.unit==='scoop'?row.qty*SCOOP_TO_M3:row.qty;}
-function getTonnes(row){const p=PRODUCTS.find(x=>x.sku===row.sku);if(!p)return 0;const conv=getConvRate(p.name);if(!conv)return 0;return getM3(row)*conv;}
-function autoTruck(t){for(const tk of TRUCKS){if(t<=tk.maxT)return tk;}return TRUCKS[TRUCKS.length-1];}
+function filterProducts(i,val){
+  productRows[i].searchText = val;
+  const filtered = PRODUCTS.filter(p=>p.name.toLowerCase().includes(val.toLowerCase())||p.sku.toLowerCase().includes(val.toLowerCase())).slice(0,20);
+  const drop = document.getElementById('pdrop-'+i);
+  if(!filtered.length){drop.style.display='none';return;}
+  drop.innerHTML = filtered.map(p=>`<div class="product-option" onclick="selectProduct(${i},'${p.sku}')"><div>${p.name}</div><div class="sku">SKU: ${p.sku} · $${p.price}</div></div>`).join('');
+  drop.style.display = 'block';
+}
+function showProductDropdown(i){filterProducts(i,productRows[i].searchText||'');}
+function selectProduct(i,sku){
+  const p = PRODUCTS.find(x=>x.sku===sku);
+  productRows[i].sku = sku;
+  productRows[i].searchText = p?p.name:'';
+  productRows[i].customPrice = null;
+  const drop = document.getElementById('pdrop-'+i);
+  if(drop) drop.style.display='none';
+  renderProductRows();
+  detectZoneFromInput();
+}
+document.addEventListener('click',e=>{ if(!e.target.closest('.product-dropdown')&&!e.target.closest('input[onfocus]')) document.querySelectorAll('.product-dropdown').forEach(d=>d.style.display='none'); });
+
+function addProductRow(){ productRows.push({sku:PRODUCTS[0]?.sku||'',qty:1,unit:'m3',customPrice:null,searchText:''}); renderProductRows(); }
+function removeProductRow(i){ productRows.splice(i,1); renderProductRows(); }
+function updateProductQty(i,val){ productRows[i].qty=parseFloat(val)||1; updateWeightSummary(); }
+function updateCustomPrice(i,val){ productRows[i].customPrice=parseFloat(val); renderProductRows(); }
+function setUnit(i,unit){ productRows[i].unit=unit; renderProductRows(); }
+function getM3(row){ return row.unit==='scoop'?row.qty*SCOOP_TO_M3:row.qty; }
+function getTonnes(row){ const p=PRODUCTS.find(x=>x.sku===row.sku); if(!p)return 0; const conv=getConvRate(p.name); if(!conv)return 0; return getM3(row)*conv; }
+function autoTruck(t){ for(const tk of TRUCKS){if(t<=tk.maxT)return tk;} return TRUCKS[TRUCKS.length-1]; }
 
 function updateWeightSummary(){
-  const totalT=productRows.reduce((s,r)=>s+getTonnes(r),0);
-  const totalM=productRows.reduce((s,r)=>s+getM3(r),0);
-  const ws=document.getElementById('weight-summary');
-  if(totalT>0){const rec=autoTruck(totalT);const pct=Math.min(100,(totalT/rec.maxT)*100);document.getElementById('weight-text').textContent=`Est. ${totalT.toFixed(2)}T / ${totalM.toFixed(1)}m3 - Recommended: ${rec.name}`;const wf=document.getElementById('weight-fill');wf.style.width=pct+'%';wf.className='weight-fill'+(pct>90?' danger':pct>70?' warning':'');ws.style.display='block';const tr=document.getElementById('truck-rec');tr.textContent=`Recommended: ${rec.name} (${totalT.toFixed(2)}T of ${rec.maxT}T max)`;tr.style.display='block';}
-  else{ws.style.display='none';document.getElementById('truck-rec').style.display='none';}
+  const totalT = productRows.reduce((s,r)=>s+getTonnes(r),0);
+  const totalM = productRows.reduce((s,r)=>s+getM3(r),0);
+  const ws = document.getElementById('weight-summary');
+  if(totalT>0){
+    const rec = autoTruck(totalT);
+    const pct = Math.min(100,(totalT/rec.maxT)*100);
+    document.getElementById('weight-text').textContent=`Est. ${totalT.toFixed(2)}T / ${totalM.toFixed(1)}m3`;
+    document.getElementById('truck-rec').textContent=`Recommended: ${rec.name} (${totalT.toFixed(2)}T of ${rec.maxT}T max)`;
+    document.getElementById('truck-rec').style.display='block';
+    const wf=document.getElementById('weight-fill'); wf.style.width=pct+'%'; wf.className='weight-fill'+(pct>90?' danger':pct>70?' warning':'');
+    ws.style.display='block';
+  } else { ws.style.display='none'; }
 }
 
-// Address autocomplete using Nominatim
+// ===== ZONES =====
+function hasSoilInOrder(){ return productRows.some(r=>{ const p=PRODUCTS.find(x=>x.sku===r.sku); return p&&isSoilProduct(p.name); }); }
+
+function detectZone(addr,truck){
+  const a = addr.toLowerCase();
+  const isBig = truck==='Hino 700'||truck==='Hino 700 Truck and Trailer';
+  const isSoil = hasSoilInOrder();
+  const zoneList = isSoil ? SOIL_ZONES : ZONES;
+  for(const z of zoneList){
+    if(z.areas.some(area=>a.includes(area))){
+      return { zone:z.name, fee:isBig?z.big:z.mini, isSoil };
+    }
+  }
+  return null;
+}
+
+function detectZoneFromInput(){
+  const addr = document.getElementById('job-address').value;
+  const truckSel = document.getElementById('truck-select').value;
+  const totalT = productRows.reduce((s,r)=>s+getTonnes(r),0);
+  const rec = totalT>0?autoTruck(totalT).name:'Hino 300';
+  const truck = truckSel==='auto'?rec:truckSel;
+  const z = detectZone(addr,truck);
+  const el = document.getElementById('zone-result');
+  if(z){ el.innerHTML=`<span class="zone-pill"><i class="ti ti-map-pin"></i> ${z.zone} - $${z.fee}+GST${z.isSoil?' (soil rate)':''}</span>`; el.style.display='block'; }
+  else if(addr.length>5){ el.innerHTML=`<span class="badge badge-pending">Zone 6 - Quote required</span>`; el.style.display='block'; }
+  else{ el.style.display='none'; }
+}
+
+// ===== ADDRESS AUTOCOMPLETE =====
 let addrTimeout;
 async function onAddressInput(){
-  const val=document.getElementById('job-address').value;
+  const val = document.getElementById('job-address').value;
   detectZoneFromInput();
   clearTimeout(addrTimeout);
   if(val.length<4){document.getElementById('address-suggestions').style.display='none';return;}
-  addrTimeout=setTimeout(async()=>{
+  addrTimeout = setTimeout(async()=>{
     try{
-      const r=await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(val+', New Zealand')}&format=json&limit=5&countrycodes=nz`,{headers:{'Accept-Language':'en'}});
-      const data=await r.json();
-      const el=document.getElementById('address-suggestions');
+      const r = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(val+', Canterbury, New Zealand')}&format=json&limit=5&countrycodes=nz`,{headers:{'Accept-Language':'en'}});
+      const data = await r.json();
+      const el = document.getElementById('address-suggestions');
       if(!data.length){el.style.display='none';return;}
-      el.innerHTML=data.map(a=>`<div class="search-result" onclick="selectAddress('${a.display_name.replace(/'/g,'&#39;')}')">${a.display_name}</div>`).join('');
-      el.style.display='block';
+      el.innerHTML = data.map(a=>`<div class="search-result" onclick="selectAddress('${a.display_name.replace(/'/g,'&#39;').replace(/"/g,'&quot;')}')">${a.display_name}</div>`).join('');
+      el.style.display = 'block';
     }catch{}
   },500);
 }
-
 function selectAddress(addr){
-  // Clean up the address - remove country etc
-  const parts=addr.split(',');
-  const cleaned=parts.slice(0,3).join(',').trim();
-  document.getElementById('job-address').value=cleaned;
+  const parts = addr.split(',');
+  const cleaned = parts.slice(0,3).join(',').trim();
+  document.getElementById('job-address').value = cleaned;
   document.getElementById('address-suggestions').style.display='none';
   detectZoneFromInput();
 }
 
-function detectZone(addr,truck){const a=addr.toLowerCase();for(const z of ZONES){if(z.areas.some(area=>a.includes(area))){const isBig=truck==='Hino 700'||truck==='Hino 700 Truck and Trailer';return{zone:z.name,fee:isBig?z.big:z.mini};}}return null;}
-function detectZoneFromInput(){
-  const addr=document.getElementById('job-address').value;
-  const truckSel=document.getElementById('truck-select').value;
-  const totalT=productRows.reduce((s,r)=>s+getTonnes(r),0);
-  const rec=totalT>0?autoTruck(totalT).name:'Hino 300';
-  const truck=truckSel==='auto'?rec:truckSel;
-  const z=detectZone(addr,truck);
-  const el=document.getElementById('zone-result');
-  if(z){el.innerHTML=`<span class="zone-pill"><i class="ti ti-map-pin"></i> ${z.zone} - $${z.fee}+GST</span>`;el.style.display='block';}
-  else if(addr.length>5){el.innerHTML=`<span class="badge badge-pending">Zone 6 - Quote required</span>`;el.style.display='block';}
-  else{el.style.display='none';}
-}
-
+// ===== CONTACTS =====
 let searchTimeout;
 function searchContacts(){
-  clearTimeout(searchTimeout);const q=document.getElementById('contact-search').value.trim();
+  clearTimeout(searchTimeout);
+  const q = document.getElementById('contact-search').value.trim();
   if(q.length<2){document.getElementById('search-results').style.display='none';return;}
-  searchTimeout=setTimeout(async()=>{
-    try{const r=await fetch('/api/contacts/search?q='+encodeURIComponent(q),{credentials:'include'});const d=await r.json();const el=document.getElementById('search-results');if(!d.contacts?.length){el.style.display='none';return;}el.innerHTML=d.contacts.map(c=>`<div class="search-result" onclick="selectContact(this)" data-id="${c.id}" data-name="${c.name.replace(/"/g,'&quot;')}" data-phone="${(c.phone||'').replace(/"/g,'&quot;')}" data-email="${(c.email||'').replace(/"/g,'&quot;')}"><div class="search-result-name">${c.name}</div><div class="search-result-sub">${[c.phone,c.email].filter(Boolean).join(' - ')}</div></div>`).join('');el.style.display='block';}catch{}
+  searchTimeout = setTimeout(async()=>{
+    try{
+      const r = await fetch('/api/contacts/search?q='+encodeURIComponent(q),{credentials:'include'});
+      const d = await r.json();
+      const el = document.getElementById('search-results');
+      if(!d.contacts?.length){el.style.display='none';return;}
+      el.innerHTML = d.contacts.map(c=>`<div class="search-result" onclick="selectContact(this)" data-id="${c.id}" data-name="${c.name.replace(/"/g,'&quot;')}" data-phone="${(c.phone||'').replace(/"/g,'&quot;')}" data-email="${(c.email||'').replace(/"/g,'&quot;')}"><div class="search-result-name">${c.name}</div><div class="search-result-sub">${[c.phone,c.email].filter(Boolean).join(' - ')}</div></div>`).join('');
+      el.style.display='block';
+    }catch{}
   },300);
 }
-function selectContact(el){const c={id:el.dataset.id,name:el.dataset.name,phone:el.dataset.phone,email:el.dataset.email};currentContact=c;document.getElementById('contact-search').value=c.name;document.getElementById('search-results').style.display='none';document.getElementById('selected-contact').style.display='block';document.getElementById('selected-contact-info').innerHTML=`<i class="ti ti-user-check"></i> <strong>${c.name}</strong>${c.phone?' - '+c.phone:''}`;document.getElementById('new-contact-form').style.display='none';document.getElementById('new-contact-toggle').style.display='none';}
-function toggleNewContact(){const form=document.getElementById('new-contact-form');const showing=form.style.display!=='none';form.style.display=showing?'none':'block';document.getElementById('new-contact-toggle').innerHTML=showing?'<i class="ti ti-user-plus"></i> Add new customer':'<i class="ti ti-x"></i> Cancel';if(showing)currentContact=null;}
+function selectContact(el){
+  const c={id:el.dataset.id,name:el.dataset.name,phone:el.dataset.phone,email:el.dataset.email};
+  currentContact=c;
+  document.getElementById('contact-search').value=c.name;
+  document.getElementById('search-results').style.display='none';
+  document.getElementById('selected-contact').style.display='block';
+  document.getElementById('selected-contact-info').innerHTML=`<i class="ti ti-user-check"></i> <strong>${c.name}</strong>${c.phone?' - '+c.phone:''}`;
+  document.getElementById('new-contact-form').style.display='none';
+  document.getElementById('new-contact-toggle').style.display='none';
+}
+function toggleNewContact(){
+  const form=document.getElementById('new-contact-form');
+  const showing=form.style.display!=='none';
+  form.style.display=showing?'none':'block';
+  document.getElementById('new-contact-toggle').innerHTML=showing?'<i class="ti ti-user-plus"></i> Add new customer':'<i class="ti ti-x"></i> Cancel';
+  if(showing) currentContact=null;
+}
 
+// ===== CONFIRM ORDER =====
 async function confirmOrder(){
-  const btn=document.getElementById('confirm-btn');const msg=document.getElementById('order-msg');msg.style.display='none';
-  if(!currentContact){const name=document.getElementById('nc-name').value.trim();if(!name){showMsg(msg,'err','Please select or add a customer.');return;}btn.disabled=true;btn.innerHTML='<span class="spinner"></span> Saving...';try{const r=await fetch('/api/contacts',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,phone:document.getElementById('nc-phone').value.trim(),email:document.getElementById('nc-email').value.trim()})});const d=await r.json();if(d.error)throw new Error(d.error);currentContact=d;}catch(e){showMsg(msg,'err','Could not create contact: '+e.message);btn.disabled=false;btn.innerHTML='<i class="ti ti-check"></i> Add to deliveries';return;}}
-  if(!productRows.length||!productRows[0].sku){showMsg(msg,'err','Please add at least one product.');return;}
-  let addr='Ex Yard',zone='Ex Yard',zoneFee=0,truck='Ex Yard',date='',time='09:00';
+  const btn=document.getElementById('confirm-btn');
+  const msg=document.getElementById('order-msg');
+  msg.style.display='none';
+
+  if(!currentContact){
+    const name=document.getElementById('nc-name').value.trim();
+    if(!name){showMsg(msg,'err','Please select or add a customer.');return;}
+    btn.disabled=true; btn.innerHTML='<span class="spinner"></span> Saving...';
+    try{
+      const r=await fetch('/api/contacts',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,phone:document.getElementById('nc-phone').value.trim(),email:document.getElementById('nc-email').value.trim()})});
+      const d=await r.json();
+      if(d.error) throw new Error(d.error);
+      currentContact=d;
+    }catch(e){showMsg(msg,'err','Could not create contact: '+e.message);btn.disabled=false;btn.innerHTML='<i class="ti ti-check"></i> Add to deliveries';return;}
+  }
+
+  const validRows = productRows.filter(r=>r.sku);
+  if(!validRows.length){showMsg(msg,'err','Please add at least one product.');return;}
+
+  let addr='Ex Yard',zone='Ex Yard',zoneFee=0,truck='Ex Yard',date='',time='09:00',zoneProductDesc='';
+
   if(deliveryType==='delivered'){
     addr=document.getElementById('job-address').value.trim();
     if(!addr){showMsg(msg,'err','Please enter a delivery address.');return;}
@@ -465,127 +607,266 @@ async function confirmOrder(){
     const zInfo=detectZone(addr,truck);
     zone=zInfo?zInfo.zone:'Zone 6 - Quote';
     zoneFee=zInfo?zInfo.fee:0;
+    const isBig=truck==='Hino 700'||truck==='Hino 700 Truck and Trailer';
+    const isSoil=hasSoilInOrder();
+    zoneProductDesc=zone==='Zone 6 - Quote'?'Zone 6 Delivery - Quote':`${zone} - ${isBig?'Big':'Mini'} Truck${isSoil?' SOIL':''} Delivery`;
   } else {
     date=document.getElementById('exyard-date').value;
     time=document.getElementById('exyard-time').value;
   }
-  const lineItems=productRows.filter(r=>r.sku).map(row=>{const p=PRODUCTS.find(x=>x.sku===row.sku);const m3=getM3(row);const qtyLabel=row.unit==='scoop'?`${row.qty} scoop${row.qty!==1?'s':''}`:`${m3.toFixed(2)}m3`;return{sku:row.sku,desc:`${p?p.name:row.sku} (${qtyLabel})`,qty:m3,price:p?p.price:0};});
-  deliveries.push({id:nextId++,contactId:currentContact.id,contactName:currentContact.name,contactPhone:currentContact.phone||'',contactEmail:currentContact.email||'',jobAddress:addr,deliveryType,date,time,notes:document.getElementById('delivery-notes').value.trim(),truck,zone,zoneFee,lineItems,done:false,invoiced:false,createdAt:new Date().toISOString()});
+
+  const lineItems = validRows.map(row=>{
+    const p=PRODUCTS.find(x=>x.sku===row.sku);
+    const m3=getM3(row);
+    const basePrice=row.customPrice!==null?row.customPrice:(p?p.price:0);
+    const qtyLabel=row.unit==='scoop'?`${row.qty} scoop${row.qty!==1?'s':''}`:`${m3.toFixed(2)}m3`;
+    return{sku:row.sku,desc:`${p?p.name:row.sku} (${qtyLabel})`,qty:m3,price:basePrice,discount:tradeDiscount?10:0};
+  });
+
+  deliveries.push({
+    id:nextId++,
+    contactId:currentContact.id,
+    contactName:currentContact.name,
+    contactPhone:currentContact.phone||'',
+    contactEmail:currentContact.email||'',
+    jobAddress:addr,
+    deliveryType,
+    paymentType,
+    tradeDiscount,
+    date,time,
+    notes:document.getElementById('delivery-notes').value.trim(),
+    truck,zone,zoneFee,
+    zoneProductDesc,
+    lineItems,
+    done:false,invoiced:false,
+    createdAt:new Date().toISOString()
+  });
   save();
-  productRows=[{sku:PRODUCTS[0]?.sku||'',qty:1,unit:'m3',searchText:''}];currentContact=null;
-  document.getElementById('contact-search').value='';document.getElementById('job-address').value='';document.getElementById('zone-result').style.display='none';document.getElementById('address-suggestions').style.display='none';document.getElementById('selected-contact').style.display='none';document.getElementById('new-contact-form').style.display='none';document.getElementById('new-contact-toggle').style.display='inline-flex';document.getElementById('new-contact-toggle').innerHTML='<i class="ti ti-user-plus"></i> Add new customer';document.getElementById('delivery-notes').value='';
-  setDeliveryType('delivered');setDefaultDate();renderProductRows();
-  btn.disabled=false;btn.innerHTML='<i class="ti ti-check"></i> Add to deliveries';
-  showMsg(msg,'ok','Delivery added for '+deliveries[deliveries.length-1].contactName);updateStats();
+
+  // Reset
+  productRows=[{sku:PRODUCTS[0]?.sku||'',qty:1,unit:'m3',customPrice:null,searchText:''}];
+  currentContact=null; tradeDiscount=false;
+  document.getElementById('contact-search').value='';
+  document.getElementById('job-address').value='';
+  document.getElementById('zone-result').style.display='none';
+  document.getElementById('address-suggestions').style.display='none';
+  document.getElementById('selected-contact').style.display='none';
+  document.getElementById('new-contact-form').style.display='none';
+  document.getElementById('new-contact-toggle').style.display='inline-flex';
+  document.getElementById('new-contact-toggle').innerHTML='<i class="ti ti-user-plus"></i> Add new customer';
+  document.getElementById('delivery-notes').value='';
+  document.getElementById('discount-toggle').textContent='Off';
+  document.getElementById('discount-toggle').style.background='#fff';
+  setPaymentType('invoice'); setDeliveryType('delivered'); setDefaultDate(); renderProductRows();
+  btn.disabled=false; btn.innerHTML='<i class="ti ti-check"></i> Add to deliveries';
+  showMsg(msg,'ok','Delivery added for '+deliveries[deliveries.length-1].contactName);
+  updateStats();
 }
 
-function updateStats(){const total=deliveries.filter(d=>!d.invoiced).length,done=deliveries.filter(d=>d.done&&!d.invoiced).length;document.getElementById('d-total').textContent=total;document.getElementById('d-done').textContent=done;document.getElementById('d-pending').textContent=total-done;}
+// ===== DELIVERIES TAB =====
+function updateStats(){
+  const active=deliveries.filter(d=>!d.invoiced);
+  const total=active.length,done=active.filter(d=>d.done).length;
+  document.getElementById('d-total').textContent=total;
+  document.getElementById('d-done').textContent=done;
+  document.getElementById('d-pending').textContent=total-done;
+}
 function filterDeliveries(f,el){deliveryFilter=f;document.querySelectorAll('#tab-deliveries .tab').forEach(t=>t.classList.remove('active'));if(el)el.classList.add('active');renderDeliveries();}
 function truckBadge(truck){if(truck==='Hino 300')return'badge-h300';if(truck==='Hino 700')return'badge-h700';if(truck==='Hino 700 Truck and Trailer')return'badge-htt';return'badge-exyard';}
-
 function fmtDate(dateStr){if(!dateStr)return'';const d=new Date(dateStr+'T00:00:00');return d.toLocaleDateString('en-NZ',{weekday:'short',day:'numeric',month:'short'});}
 
 function renderDeliveries(){
   updateStats();
-  const items=deliveries.filter(d=>!d.invoiced&&(deliveryFilter==='all'||d.truck===deliveryFilter)).sort((a,b)=>{const da=(a.date||'9999')+'-'+(a.time||'');const db=(b.date||'9999')+'-'+(b.time||'');return da.localeCompare(db);});
+  const items=deliveries.filter(d=>!d.invoiced&&(deliveryFilter==='all'||d.truck===deliveryFilter)).sort((a,b)=>((a.date||'9999')+a.time).localeCompare((b.date||'9999')+b.time));
   const el=document.getElementById('deliveries-list');
   if(!items.length){el.innerHTML='<div class="empty"><i class="ti ti-truck-off"></i>No deliveries yet</div>';return;}
-  el.innerHTML=items.map(d=>{const total=(d.lineItems||[]).reduce((s,li)=>s+li.qty*li.price,0)+d.zoneFee;return`<div class="delivery-card"><div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px"><div><div class="delivery-name">${d.contactName}</div><div class="delivery-meta">${d.date?fmtDate(d.date)+' ':''} ${d.time} · ${d.jobAddress}</div><div class="delivery-meta">${(d.lineItems||[]).map(li=>li.desc).join(', ')}</div></div><div style="text-align:right"><div style="font-weight:700">$${total.toFixed(0)}</div><div class="muted" style="font-size:11px">+GST</div></div></div><div class="delivery-badges"><span class="badge ${truckBadge(d.truck)}">${d.truck}</span>${d.deliveryType==='delivered'?`<span class="zone-pill">${d.zone}</span>`:'<span class="badge badge-exyard">Ex Yard</span>'}<span class="badge ${d.done?'badge-done':'badge-pending'}">${d.done?'Done':'Pending'}</span></div><div class="delivery-actions"><button class="btn btn-sm" onclick="toggleDone(${d.id})">${d.done?'<i class="ti ti-rotate-clockwise"></i> Undo':'<i class="ti ti-check"></i> Done'}</button>${d.deliveryType==='delivered'?`<a href="https://maps.google.com/maps?q=${encodeURIComponent(d.jobAddress)}" target="_blank" class="btn btn-sm"><i class="ti ti-map-pin"></i> Map</a>`:''}<button class="btn btn-sm btn-danger" onclick="deleteDelivery(${d.id})"><i class="ti ti-trash"></i></button></div></div>`;}).join('');
+  el.innerHTML=items.map(d=>{
+    const total=(d.lineItems||[]).reduce((s,li)=>s+li.qty*(li.discount?li.price*(1-li.discount/100):li.price),0)+d.zoneFee;
+    return`<div class="delivery-card">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
+        <div>
+          <div class="delivery-name">${d.contactName}</div>
+          <div class="delivery-meta">${d.date?fmtDate(d.date)+' ':''} ${d.time} · ${d.jobAddress}</div>
+          <div class="delivery-meta">${(d.lineItems||[]).map(li=>li.desc).join(', ')}</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-weight:700">$${total.toFixed(0)}</div>
+          <div class="muted" style="font-size:11px">+GST</div>
+        </div>
+      </div>
+      <div class="delivery-badges">
+        <span class="badge ${truckBadge(d.truck)}">${d.truck}</span>
+        ${d.deliveryType==='delivered'?`<span class="zone-pill">${d.zone}</span>`:'<span class="badge badge-exyard">Ex Yard</span>'}
+        <span class="badge ${d.paymentType==='eftpos'?'badge-eftpos':'badge-pending'}">${d.paymentType==='eftpos'?'EFTPOS':d.done?'Done':'Pending'}</span>
+        ${d.tradeDiscount?'<span class="discount-badge">10% disc</span>':''}
+      </div>
+      <div class="delivery-actions">
+        <button class="btn btn-sm" onclick="toggleDone(${d.id})">${d.done?'<i class="ti ti-rotate-clockwise"></i> Undo':'<i class="ti ti-check"></i> Done'}</button>
+        ${d.deliveryType==='delivered'?`<a href="https://maps.google.com/maps?q=${encodeURIComponent(d.jobAddress)}" target="_blank" class="btn btn-sm"><i class="ti ti-map-pin"></i> Map</a>`:''}
+        <button class="btn btn-sm btn-danger" onclick="deleteDelivery(${d.id})"><i class="ti ti-trash"></i></button>
+      </div>
+    </div>`;
+  }).join('');
 }
 function toggleDone(id){const d=deliveries.find(x=>x.id===id);if(d){d.done=!d.done;save();renderDeliveries();renderInvoiceList();renderDriverList();}}
 function deleteDelivery(id){if(!confirm('Delete?'))return;deliveries=deliveries.filter(x=>x.id!==id);save();renderDeliveries();renderInvoiceList();renderArchive();}
 
+// ===== INVOICE TAB =====
 function renderInvoiceList(){
-  const pending=deliveries.filter(d=>!d.invoiced);const el=document.getElementById('invoice-list');
-  if(!pending.length){el.innerHTML='<div class="empty"><i class="ti ti-file-check"></i>All deliveries invoiced</div>';document.getElementById('invoice-summary').style.display='none';return;}
-  el.innerHTML=pending.map(d=>{const total=(d.lineItems||[]).reduce((s,li)=>s+li.qty*li.price,0)+d.zoneFee;const sel=selectedForInvoice.has(d.id);return`<div class="delivery-card ${sel?'selected':''}" onclick="toggleInvoiceSelect(${d.id})"><div style="display:flex;align-items:center;gap:10px"><div style="width:22px;height:22px;border-radius:50%;border:2px solid ${sel?'#2d7a3a':'#ddd'};background:${sel?'#2d7a3a':'#fff'};display:flex;align-items:center;justify-content:center;flex-shrink:0">${sel?'<i class="ti ti-check" style="font-size:12px;color:#fff"></i>':''}</div><div style="flex:1"><div class="delivery-name">${d.contactName}</div><div class="delivery-meta">${d.date?fmtDate(d.date)+' ':''} ${d.jobAddress}</div><div class="delivery-badges" style="margin-top:6px"><span class="badge ${truckBadge(d.truck)}">${d.truck}</span>${d.deliveryType==='delivered'?`<span class="zone-pill">${d.zone} $${d.zoneFee}</span>`:'<span class="badge badge-exyard">Ex Yard</span>'}<span style="font-weight:700">$${total.toFixed(0)}+GST</span></div></div></div></div>`;}).join('');
+  const pending=deliveries.filter(d=>!d.invoiced&&d.paymentType!=='eftpos');
+  const el=document.getElementById('invoice-list');
+  if(!pending.length){el.innerHTML='<div class="empty"><i class="ti ti-file-check"></i>No deliveries to invoice</div>';document.getElementById('invoice-summary').style.display='none';return;}
+  el.innerHTML=pending.map(d=>{
+    const total=(d.lineItems||[]).reduce((s,li)=>s+li.qty*(li.discount?li.price*(1-li.discount/100):li.price),0)+d.zoneFee;
+    const sel=selectedForInvoice.has(d.id);
+    return`<div class="delivery-card ${sel?'selected':''}" onclick="toggleInvoiceSelect(${d.id})">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="width:22px;height:22px;border-radius:50%;border:2px solid ${sel?'#2d7a3a':'#ddd'};background:${sel?'#2d7a3a':'#fff'};display:flex;align-items:center;justify-content:center;flex-shrink:0">${sel?'<i class="ti ti-check" style="font-size:12px;color:#fff"></i>':''}</div>
+        <div style="flex:1">
+          <div class="delivery-name">${d.contactName}</div>
+          <div class="delivery-meta">${d.date?fmtDate(d.date)+' ':''} ${d.jobAddress}</div>
+          <div class="delivery-badges" style="margin-top:6px">
+            <span class="badge ${truckBadge(d.truck)}">${d.truck}</span>
+            ${d.deliveryType==='delivered'?`<span class="zone-pill">${d.zone} $${d.zoneFee}</span>`:'<span class="badge badge-exyard">Ex Yard</span>'}
+            ${d.tradeDiscount?'<span class="discount-badge">10% disc</span>':''}
+            <span style="font-weight:700">$${total.toFixed(0)}+GST</span>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
   updateInvoiceSummary();
 }
 function toggleInvoiceSelect(id){if(selectedForInvoice.has(id))selectedForInvoice.delete(id);else selectedForInvoice.add(id);renderInvoiceList();}
-function updateInvoiceSummary(){const sel=deliveries.filter(d=>selectedForInvoice.has(d.id));const el=document.getElementById('invoice-summary');if(!sel.length){el.style.display='none';return;}const total=sel.reduce((s,d)=>s+(d.lineItems||[]).reduce((ss,li)=>ss+li.qty*li.price,0)+d.zoneFee,0);document.getElementById('invoice-summary-text').innerHTML=`<div style="font-size:14px"><strong>${[...new Set(sel.map(d=>d.contactName))].join(', ')}</strong> - ${sel.length} delivery${sel.length>1?'s':''}</div><div style="font-size:16px;font-weight:700;margin-top:8px;color:#2d7a3a">Total: $${total.toFixed(2)} + GST</div>`;el.style.display='block';}
-
-async function createInvoice(){
-  const sel=deliveries.filter(d=>selectedForInvoice.has(d.id));if(!sel.length)return;
-  const btn=document.getElementById('create-inv-btn');const msg=document.getElementById('invoice-msg');msg.style.display='none';
-  btn.disabled=true;btn.innerHTML='<span class="spinner"></span> Creating in Xero...';
-  try{const r=await fetch('/api/invoices',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({contactId:sel[0].contactId,contactName:sel[0].contactName,jobAddress:sel.map(d=>d.jobAddress).filter((v,i,a)=>a.indexOf(v)===i).join(', '),deliveries:sel})});const d=await r.json();if(d.error)throw new Error(d.error);sel.forEach(d=>{d.invoiced=true;d.invoicedAt=new Date().toISOString();});selectedForInvoice.clear();save();showMsg(msg,'ok','Draft invoice created in Xero! Ref: '+(d.invoiceNumber||d.invoiceId));renderInvoiceList();renderDeliveries();renderArchive();}
-  catch(e){showMsg(msg,'err','Failed: '+e.message);}
-  btn.disabled=false;btn.innerHTML='<i class="ti ti-file-invoice"></i> Create draft invoice in Xero';
+function updateInvoiceSummary(){
+  const sel=deliveries.filter(d=>selectedForInvoice.has(d.id));
+  const el=document.getElementById('invoice-summary');
+  if(!sel.length){el.style.display='none';return;}
+  const total=sel.reduce((s,d)=>(d.lineItems||[]).reduce((ss,li)=>ss+li.qty*(li.discount?li.price*(1-li.discount/100):li.price),0)+d.zoneFee+s,0);
+  document.getElementById('invoice-summary-text').innerHTML=`<div style="font-size:14px"><strong>${[...new Set(sel.map(d=>d.contactName))].join(', ')}</strong> - ${sel.length} delivery${sel.length>1?'s':''}</div><div style="font-size:16px;font-weight:700;margin-top:8px;color:#2d7a3a">Total: $${total.toFixed(2)} + GST</div>`;
+  el.style.display='block';
 }
 
-// DRIVER - collapsible day sections
-function filterDriver(truck,el){driverFilter=truck;document.querySelectorAll('#tab-driver .tab').forEach(t=>t.classList.remove('active'));if(el)el.classList.add('active');renderDriverList();}
+async function createInvoice(){
+  const sel=deliveries.filter(d=>selectedForInvoice.has(d.id));
+  if(!sel.length) return;
+  const btn=document.getElementById('create-inv-btn');
+  const msg=document.getElementById('invoice-msg');
+  msg.style.display='none';
+  btn.disabled=true; btn.innerHTML='<span class="spinner"></span> Creating in Xero...';
+  try{
+    const r=await fetch('/api/invoices',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({contactId:sel[0].contactId,contactName:sel[0].contactName,jobAddress:sel.map(d=>d.jobAddress).filter((v,i,a)=>a.indexOf(v)===i).join(', '),deliveries:sel})});
+    const d=await r.json();
+    if(d.error) throw new Error(d.error);
+    sel.forEach(d=>{d.invoiced=true;d.invoicedAt=new Date().toISOString();});
+    selectedForInvoice.clear(); save();
+    showMsg(msg,'ok','Draft invoice created in Xero! Ref: '+(d.invoiceNumber||d.invoiceId));
+    renderInvoiceList(); renderDeliveries(); renderArchive();
+  }catch(e){showMsg(msg,'err','Failed: '+e.message);}
+  btn.disabled=false; btn.innerHTML='<i class="ti ti-file-invoice"></i> Create draft invoice in Xero';
+}
 
-function getWeekDay(dateStr){if(!dateStr)return 6;const d=new Date(dateStr+'T00:00:00');return d.getDay();}
+// ===== DRIVER TAB =====
+function filterDriver(truck,el){driverFilter=truck;document.querySelectorAll('#tab-driver .tab').forEach(t=>t.classList.remove('active'));if(el)el.classList.add('active');renderDriverList();}
 
 function renderDriverList(){
   const items=deliveries.filter(d=>d.truck===driverFilter&&d.deliveryType==='delivered'&&!d.invoiced);
   const el=document.getElementById('driver-list');
   if(!items.length){el.innerHTML='<div class="empty"><i class="ti ti-mood-happy"></i>No deliveries for this truck</div>';return;}
 
-  // Group by date
   const byDate={};
   items.forEach(d=>{const key=d.date||'unscheduled';if(!byDate[key])byDate[key]=[];byDate[key].push(d);});
-  const sortedDates=Object.keys(byDate).sort();
+  const today=new Date().toISOString().split('T')[0];
 
-  el.innerHTML=sortedDates.map(date=>{
+  el.innerHTML=Object.keys(byDate).sort().map(date=>{
     const dayItems=byDate[date].sort((a,b)=>(a.time||'').localeCompare(b.time||''));
     const done=dayItems.filter(d=>d.done).length;
-    const dateLabel=date==='unscheduled'?'Unscheduled':fmtDate(date);
-    const dayName=date==='unscheduled'?'':(DAYS[new Date(date+'T00:00:00').getDay()]);
-    const isToday=date===new Date().toISOString().split('T')[0];
+    const isToday=date===today;
+    const dayLabel=date==='unscheduled'?'Unscheduled':DAYS[new Date(date+'T00:00:00').getDay()]+' - '+fmtDate(date);
     return`<div class="day-section">
       <div class="day-header" onclick="toggleDay('day-${date}')">
-        <h3>${dayName?dayName+' - ':''} ${dateLabel} ${isToday?'(Today)':''}</h3>
-        <span class="day-count">${done}/${dayItems.length} done <i class="ti ti-chevron-down"></i></span>
+        <h3>${dayLabel}${isToday?' ⭐':''}</h3>
+        <span style="font-size:12px;color:#888">${done}/${dayItems.length} done <i class="ti ti-chevron-down"></i></span>
       </div>
       <div id="day-${date}" class="day-body${isToday?' open':''}">
-        ${dayItems.map(d=>`<div class="delivery-card" style="margin-bottom:8px"><div style="display:flex;gap:10px;align-items:flex-start"><div style="width:26px;height:26px;border-radius:50%;border:2px solid ${d.done?'#2d7a3a':'#ddd'};background:${d.done?'#2d7a3a':'#fff'};display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;margin-top:2px" onclick="toggleDone(${d.id})">${d.done?'<i class="ti ti-check" style="font-size:13px;color:#fff"></i>':''}</div><div style="flex:1"><div class="delivery-name ${d.done?'muted':''}" style="${d.done?'text-decoration:line-through':''}">${d.contactName}</div><div class="delivery-meta">${d.time} - ${d.jobAddress}</div>${d.contactPhone?`<div class="delivery-meta"><i class="ti ti-phone" style="font-size:12px"></i> ${d.contactPhone}</div>`:''}<div class="delivery-meta" style="font-size:12px">${(d.lineItems||[]).map(li=>li.desc).join(', ')}</div><div class="delivery-badges" style="margin-top:4px"><span class="zone-pill">${d.zone}</span></div><div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px"><a href="https://maps.google.com/maps?q=${encodeURIComponent(d.jobAddress)}" target="_blank" class="btn btn-sm"><i class="ti ti-map-pin"></i> Navigate</a>${d.contactPhone?`<a href="tel:${d.contactPhone}" class="btn btn-sm"><i class="ti ti-phone"></i> Call</a>`:''}</div></div></div></div>`).join('')}
+        ${dayItems.map(d=>`<div class="delivery-card" style="margin-bottom:8px">
+          <div style="display:flex;gap:10px;align-items:flex-start">
+            <div style="width:26px;height:26px;border-radius:50%;border:2px solid ${d.done?'#2d7a3a':'#ddd'};background:${d.done?'#2d7a3a':'#fff'};display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;margin-top:2px" onclick="toggleDone(${d.id})">${d.done?'<i class="ti ti-check" style="font-size:13px;color:#fff"></i>':''}</div>
+            <div style="flex:1">
+              <div class="delivery-name ${d.done?'muted':''}" style="${d.done?'text-decoration:line-through':''}">${d.contactName}</div>
+              <div class="delivery-meta">${d.time} - ${d.jobAddress}</div>
+              ${d.contactPhone?`<div class="delivery-meta"><i class="ti ti-phone" style="font-size:12px"></i> ${d.contactPhone}</div>`:''}
+              <div class="delivery-meta" style="font-size:12px">${(d.lineItems||[]).map(li=>li.desc).join(', ')}</div>
+              ${d.notes?`<div class="delivery-meta" style="font-style:italic">${d.notes}</div>`:''}
+              <div class="delivery-badges" style="margin-top:4px"><span class="zone-pill">${d.zone}</span></div>
+              <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
+                <a href="https://maps.google.com/maps?q=${encodeURIComponent(d.jobAddress)}" target="_blank" class="btn btn-sm"><i class="ti ti-map-pin"></i> Navigate</a>
+                ${d.contactPhone?`<a href="tel:${d.contactPhone}" class="btn btn-sm"><i class="ti ti-phone"></i> Call</a>`:''}
+              </div>
+            </div>
+          </div>
+        </div>`).join('')}
       </div>
     </div>`;
   }).join('');
 }
-
 function toggleDay(id){const el=document.getElementById(id);if(el)el.classList.toggle('open');}
 
-// ARCHIVE - invoiced deliveries by week
-function getWeekNumber(dateStr){
+// ===== ARCHIVE TAB =====
+function getWeekLabel(dateStr){
   const d=new Date(dateStr||Date.now());
-  d.setHours(0,0,0,0);d.setDate(d.getDate()+4-(d.getDay()||7));
+  d.setHours(0,0,0,0); d.setDate(d.getDate()+4-(d.getDay()||7));
   const yearStart=new Date(d.getFullYear(),0,1);
-  return{week:Math.ceil((((d-yearStart)/86400000)+1)/7),year:d.getFullYear()};
+  const week=Math.ceil((((d-yearStart)/86400000)+1)/7);
+  return{week,year:d.getFullYear(),key:`${d.getFullYear()}-W${String(week).padStart(2,'0')}`};
 }
 
 function renderArchive(){
-  const invoiced=deliveries.filter(d=>d.invoiced);
+  const done=deliveries.filter(d=>d.invoiced||d.paymentType==='eftpos'&&d.done);
   const el=document.getElementById('archive-list');
-  if(!invoiced.length){el.innerHTML='<div class="empty"><i class="ti ti-archive"></i>No completed deliveries yet</div>';return;}
+  if(!done.length){el.innerHTML='<div class="empty"><i class="ti ti-archive"></i>No completed deliveries yet</div>';return;}
 
-  // Group by week
   const byWeek={};
-  invoiced.forEach(d=>{
-    const {week,year}=getWeekNumber(d.invoicedAt||d.createdAt);
-    const key=`${year}-W${String(week).padStart(2,'0')}`;
+  done.forEach(d=>{
+    const {week,year,key}=getWeekLabel(d.invoicedAt||d.createdAt);
     if(!byWeek[key])byWeek[key]={week,year,items:[]};
     byWeek[key].items.push(d);
   });
 
-  const sortedWeeks=Object.keys(byWeek).sort().reverse();
-  el.innerHTML=sortedWeeks.map(key=>{
+  el.innerHTML=Object.keys(byWeek).sort().reverse().map(key=>{
     const {week,year,items}=byWeek[key];
-    const total=items.reduce((s,d)=>(d.lineItems||[]).reduce((ss,li)=>ss+li.qty*li.price,0)+d.zoneFee+s,0);
+    const total=items.reduce((s,d)=>(d.lineItems||[]).reduce((ss,li)=>ss+li.qty*(li.discount?li.price*(1-li.discount/100):li.price),0)+d.zoneFee+s,0);
     return`<div class="week-section">
       <div class="week-header" onclick="toggleWeek('week-${key}')">
         <h3>Week ${week}, ${year}</h3>
         <span style="font-size:12px;color:#888">${items.length} deliveries · $${total.toFixed(0)}+GST <i class="ti ti-chevron-down"></i></span>
       </div>
       <div id="week-${key}" class="week-body">
-        ${items.map(d=>{const tot=(d.lineItems||[]).reduce((s,li)=>s+li.qty*li.price,0)+d.zoneFee;return`<div class="delivery-card" style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;align-items:flex-start"><div><div class="delivery-name">${d.contactName}</div><div class="delivery-meta">${d.date?fmtDate(d.date)+' ':''} ${d.jobAddress}</div><div class="delivery-meta">${(d.lineItems||[]).map(li=>li.desc).join(', ')}</div><div class="delivery-badges" style="margin-top:6px"><span class="badge badge-invoiced">Invoiced</span><span class="badge ${truckBadge(d.truck)}">${d.truck}</span></div></div><div style="text-align:right"><div style="font-weight:700">$${tot.toFixed(0)}</div><button class="btn btn-sm btn-danger" style="margin-top:6px" onclick="deleteDelivery(${d.id})"><i class="ti ti-trash"></i></button></div></div></div>`;}).join('')}
+        ${items.map(d=>{
+          const tot=(d.lineItems||[]).reduce((s,li)=>s+li.qty*(li.discount?li.price*(1-li.discount/100):li.price),0)+d.zoneFee;
+          return`<div class="delivery-card" style="margin-bottom:8px">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start">
+              <div>
+                <div class="delivery-name">${d.contactName}</div>
+                <div class="delivery-meta">${d.date?fmtDate(d.date)+' ':''} ${d.jobAddress}</div>
+                <div class="delivery-meta">${(d.lineItems||[]).map(li=>li.desc).join(', ')}</div>
+                <div class="delivery-badges" style="margin-top:6px">
+                  <span class="badge ${d.invoiced?'badge-invoiced':'badge-eftpos'}">${d.invoiced?'Invoiced':'EFTPOS'}</span>
+                  <span class="badge ${truckBadge(d.truck)}">${d.truck}</span>
+                  ${d.tradeDiscount?'<span class="discount-badge">10% disc</span>':''}
+                </div>
+              </div>
+              <div style="text-align:right">
+                <div style="font-weight:700">$${tot.toFixed(0)}</div>
+                <button class="btn btn-sm btn-danger" style="margin-top:6px" onclick="deleteDelivery(${d.id})"><i class="ti ti-trash"></i></button>
+              </div>
+            </div>
+          </div>`;
+        }).join('')}
       </div>
     </div>`;
   }).join('');
 }
-
 function toggleWeek(id){const el=document.getElementById(id);if(el)el.classList.toggle('open');}
 
 function showMsg(el,type,text){el.className='alert alert-'+(type==='ok'?'ok':'err');el.textContent=text;el.style.display='block';if(type==='ok')setTimeout(()=>el.style.display='none',4000);}
