@@ -13,7 +13,7 @@ app.use(express.static(path.join(process.cwd(), 'public')));
 const XERO_CLIENT_ID = process.env.XERO_CLIENT_ID;
 const XERO_CLIENT_SECRET = process.env.XERO_CLIENT_SECRET;
 const XERO_REDIRECT_URI = process.env.XERO_REDIRECT_URI;
-const const XERO_SCOPES = 'offline_access accounting.contacts accounting.contacts.read accounting.invoices accounting.invoices.read';
+const XERO_SCOPES = 'offline_access accounting.contacts accounting.contacts.read accounting.invoices accounting.invoices.read';
 
 async function getDb() {
   const client = new Client({ connectionString: process.env.DATABASE_URL });
