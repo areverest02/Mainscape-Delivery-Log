@@ -83,6 +83,26 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: #2d7a3a
 .weight-fill { height: 100%; border-radius: 3px; background: #2d7a3a; transition: width 0.3s; }
 .weight-fill.warning { background: #f59e0b; }
 .weight-fill.danger { background: #ef4444; }
+/* Product search */
+.product-search-wrap { position: relative; }
+.product-search-input { width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 13px; font-family: inherit; }
+.product-dropdown { position: absolute; top: 100%; left: 0; right: 0; background: #fff; border: 1px solid #ddd; border-radius: 8px; max-height: 200px; overflow-y: auto; z-index: 100; box-shadow: 0 4px 12px rgba(0,0,0,0.1); display: none; }
+.product-option { padding: 10px 12px; cursor: pointer; border-bottom: 1px solid #f5f5f0; font-size: 13px; }
+.product-option:hover { background: #f0fdf4; }
+.product-option .price { font-size: 11px; color: #888; }
+/* Day sections */
+.day-section { margin-bottom: 8px; border: 1px solid #e8e8e2; border-radius: 12px; overflow: hidden; }
+.day-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; background: #f9f9f7; cursor: pointer; }
+.day-header h3 { font-size: 15px; font-weight: 600; }
+.day-header .day-count { font-size: 12px; color: #888; }
+.day-body { padding: 8px; display: none; }
+.day-body.open { display: block; }
+/* Week sections */
+.week-section { margin-bottom: 12px; border: 1px solid #e8e8e2; border-radius: 12px; overflow: hidden; }
+.week-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; background: #f9f9f7; cursor: pointer; }
+.week-header h3 { font-size: 14px; font-weight: 600; }
+.week-body { padding: 8px; display: none; }
+.week-body.open { display: block; }
 </style>
 </head>
 <body>
@@ -111,8 +131,10 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: #2d7a3a
       <button class="nav-btn" id="nav-deliveries" onclick="showTab('deliveries')"><i class="ti ti-truck"></i><span>Deliveries</span></button>
       <button class="nav-btn" id="nav-invoice" onclick="showTab('invoice')"><i class="ti ti-file-invoice"></i><span>Invoice</span></button>
       <button class="nav-btn" id="nav-driver" onclick="showTab('driver')"><i class="ti ti-steering-wheel"></i><span>Driver</span></button>
+      <button class="nav-btn" id="nav-archive" onclick="showTab('archive')"><i class="ti ti-archive"></i><span>Archive</span></button>
     </div>
 
+    <!-- NEW ORDER -->
     <div id="tab-orders" class="content">
       <div class="section-hdr">Customer</div>
       <div class="card">
@@ -158,7 +180,8 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: #2d7a3a
         <div class="card">
           <div class="form-group">
             <label>Delivery address</label>
-            <input type="text" id="job-address" placeholder="e.g. 14 Rolleston Drive, Rolleston" oninput="detectZoneFromInput()">
+            <input type="text" id="job-address" placeholder="Start typing address..." oninput="onAddressInput()" autocomplete="off">
+            <div id="address-suggestions" class="search-results" style="display:none"></div>
             <div id="zone-result" style="margin-top:6px;display:none"></div>
           </div>
           <div class="form-group">
@@ -171,9 +194,31 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: #2d7a3a
             </select>
           </div>
           <div id="truck-rec" style="display:none;font-size:13px;padding:8px;background:#f0fdf4;border-radius:8px;color:#166534;margin-bottom:10px"></div>
-          <div class="form-group" style="margin-bottom:0">
-            <label>Time slot</label>
-            <input type="time" id="delivery-time" value="09:00">
+          <div class="row">
+            <div class="form-group">
+              <label>Date</label>
+              <input type="date" id="delivery-date">
+            </div>
+            <div class="form-group">
+              <label>Time slot</label>
+              <input type="time" id="delivery-time" value="09:00">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="exyard-details" style="display:none">
+        <div class="section-hdr">Ex Yard details</div>
+        <div class="card">
+          <div class="row">
+            <div class="form-group">
+              <label>Date</label>
+              <input type="date" id="exyard-date">
+            </div>
+            <div class="form-group">
+              <label>Time slot</label>
+              <input type="time" id="exyard-time" value="09:00">
+            </div>
           </div>
         </div>
       </div>
@@ -187,6 +232,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: #2d7a3a
       <button class="btn btn-primary btn-full" onclick="confirmOrder()" id="confirm-btn"><i class="ti ti-check"></i> Add to deliveries</button>
     </div>
 
+    <!-- DELIVERIES -->
     <div id="tab-deliveries" class="content" style="display:none">
       <div class="stats-row">
         <div class="stat"><div class="stat-num" id="d-total">0</div><div class="stat-label">Total</div></div>
@@ -202,6 +248,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: #2d7a3a
       <div id="deliveries-list"></div>
     </div>
 
+    <!-- INVOICE -->
     <div id="tab-invoice" class="content" style="display:none">
       <div class="section-hdr">Select deliveries to invoice</div>
       <p class="muted" style="margin-bottom:12px;font-size:13px">Tap deliveries for the same customer then create one Xero invoice.</p>
@@ -216,18 +263,20 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: #2d7a3a
       </div>
     </div>
 
+    <!-- DRIVER -->
     <div id="tab-driver" class="content" style="display:none">
       <div class="tabs">
         <button class="tab active" onclick="filterDriver('Hino 300',this)">Hino 300</button>
         <button class="tab" onclick="filterDriver('Hino 700',this)">Hino 700</button>
         <button class="tab" onclick="filterDriver('Hino 700 Truck and Trailer',this)">H700 T&T</button>
       </div>
-      <div class="stats-row">
-        <div class="stat"><div class="stat-num" id="drv-total">0</div><div class="stat-label">Stops</div></div>
-        <div class="stat"><div class="stat-num" id="drv-done">0</div><div class="stat-label">Done</div></div>
-        <div class="stat"><div class="stat-num" id="drv-left">0</div><div class="stat-label">Left</div></div>
-      </div>
       <div id="driver-list"></div>
+    </div>
+
+    <!-- ARCHIVE -->
+    <div id="tab-archive" class="content" style="display:none">
+      <div class="section-hdr">Completed deliveries by week</div>
+      <div id="archive-list"></div>
     </div>
   </div>
 </div>
@@ -241,40 +290,27 @@ const ZONES=[
   {name:'Zone 5',areas:['marshland','parklands','burwood','new brighton','bromley'],mini:111,big:175}
 ];
 const TRUCKS=[{name:'Hino 300',maxT:6},{name:'Hino 700',maxT:12},{name:'Hino 700 Truck and Trailer',maxT:30}];
+const DAYS=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 const SCOOP_TO_M3=1/3;
-
-// Products will be loaded from Xero
 let PRODUCTS=[];
-
-// Conversion rates by keyword (tonnes per m3)
-const CONV_RATES={
-  'bark':null,'mulch':null,'firewood':null,'peastraw':null,'weed':null,
-  'chip':1.5,'schist':1.5,'pebble':1.6,'aggregate':1.65,'ap20':1.65,'ap40':1.75,
-  'crusher':1.5,'premix':1.7,'rounds':1.6,'tailings':1.6,'sand':1.55,
-  'soil':1.2,'compost':1.2,'vege':1.2,'garden':1.2,'topdress':1.2,'living earth':1.2
-};
-
-function getConvRate(productName){
-  const n=productName.toLowerCase();
-  for(const [key,val] of Object.entries(CONV_RATES)){if(n.includes(key))return val;}
-  return null;
-}
+const CONV_RATES={'chip':1.5,'schist':1.5,'pebble':1.6,'aggregate':1.65,'ap20':1.65,'ap40':1.75,'crusher':1.5,'premix':1.7,'rounds':1.6,'tailings':1.6,'sand':1.55,'soil':1.2,'compost':1.2,'vege':1.2,'garden':1.2,'topdress':1.2,'living earth':1.2};
+function getConvRate(n){const nl=n.toLowerCase();for(const [k,v] of Object.entries(CONV_RATES)){if(nl.includes(k))return v;}return null;}
 
 let deliveries=JSON.parse(localStorage.getItem('ms_dlv')||'[]');
 let nextId=parseInt(localStorage.getItem('ms_nid')||'1');
 let currentContact=null,deliveryType='delivered',driverFilter='Hino 300',deliveryFilter='all',selectedForInvoice=new Set();
-let productRows=[{sku:'',qty:1,unit:'m3'}];
+let productRows=[{sku:'',qty:1,unit:'m3',searchText:''}];
 function save(){localStorage.setItem('ms_dlv',JSON.stringify(deliveries));localStorage.setItem('ms_nid',String(nextId));}
 
+// Set today's date as default
+function setDefaultDate(){
+  const today=new Date().toISOString().split('T')[0];
+  document.getElementById('delivery-date').value=today;
+  document.getElementById('exyard-date').value=today;
+}
+
 async function loadProducts(){
-  try{
-    const r=await fetch('/api/products',{credentials:'include'});
-    const d=await r.json();
-    if(d.products&&d.products.length){
-      PRODUCTS=d.products;
-      if(!productRows[0].sku&&PRODUCTS.length)productRows[0].sku=PRODUCTS[0].sku;
-    }
-  }catch(e){console.log('Products load failed, using defaults');}
+  try{const r=await fetch('/api/products',{credentials:'include'});const d=await r.json();if(d.products&&d.products.length){PRODUCTS=d.products;if(!productRows[0].sku&&PRODUCTS.length)productRows[0].sku=PRODUCTS[0].sku;}}catch(e){}
   document.getElementById('products-loading').style.display='none';
   document.getElementById('product-rows').style.display='block';
   document.getElementById('add-product-btn').style.display='inline-flex';
@@ -282,41 +318,69 @@ async function loadProducts(){
 }
 
 async function checkAuth(){
-  try{const r=await fetch('/auth/status',{credentials:'include'});const d=await r.json();if(d.connected){showApp();}else{const p=new URLSearchParams(window.location.search);if(p.get('error')){document.getElementById('login-msg').textContent='Connection failed. Please try again.';document.getElementById('login-msg').style.display='block';}document.getElementById('screen-login').classList.add('active');}}catch{document.getElementById('screen-login').classList.add('active');}
+  try{const r=await fetch('/auth/status',{credentials:'include'});const d=await r.json();if(d.connected){showApp();}else{const p=new URLSearchParams(window.location.search);if(p.get('error')){document.getElementById('login-msg').textContent='Connection failed.';document.getElementById('login-msg').style.display='block';}document.getElementById('screen-login').classList.add('active');}}catch{document.getElementById('screen-login').classList.add('active');}
 }
 function connectXero(){window.location.href='/auth/xero';}
-function showApp(){
-  document.getElementById('screen-login').classList.remove('active');
-  document.getElementById('screen-app').classList.add('active');
-  loadProducts();
-  renderDeliveries();renderInvoiceList();renderDriverList();updateStats();
-}
+function showApp(){document.getElementById('screen-login').classList.remove('active');document.getElementById('screen-app').classList.add('active');setDefaultDate();loadProducts();renderDeliveries();renderInvoiceList();renderDriverList();renderArchive();updateStats();}
 async function logout(){await fetch('/auth/logout',{credentials:'include'});window.location.reload();}
-function showTab(tab){['orders','deliveries','invoice','driver'].forEach(t=>{document.getElementById('tab-'+t).style.display=t===tab?'block':'none';document.getElementById('nav-'+t).classList.toggle('active',t===tab);});if(tab==='deliveries')renderDeliveries();if(tab==='invoice')renderInvoiceList();if(tab==='driver')renderDriverList();}
-function setDeliveryType(type){deliveryType=type;document.getElementById('toggle-delivered').classList.toggle('active',type==='delivered');document.getElementById('toggle-exyard').classList.toggle('active',type==='exyard');document.getElementById('delivery-details').style.display=type==='delivered'?'block':'none';}
+function showTab(tab){['orders','deliveries','invoice','driver','archive'].forEach(t=>{document.getElementById('tab-'+t).style.display=t===tab?'block':'none';document.getElementById('nav-'+t).classList.toggle('active',t===tab);});if(tab==='deliveries')renderDeliveries();if(tab==='invoice')renderInvoiceList();if(tab==='driver')renderDriverList();if(tab==='archive')renderArchive();}
+function setDeliveryType(type){deliveryType=type;document.getElementById('toggle-delivered').classList.toggle('active',type==='delivered');document.getElementById('toggle-exyard').classList.toggle('active',type==='exyard');document.getElementById('delivery-details').style.display=type==='delivered'?'block':'none';document.getElementById('exyard-details').style.display=type==='exyard'?'block':'none';}
 
+// Product search
 function renderProductRows(){
   if(!PRODUCTS.length)return;
   const el=document.getElementById('product-rows');
   el.innerHTML=productRows.map((row,i)=>{
-    const p=PRODUCTS.find(x=>x.sku===row.sku)||PRODUCTS[0];
-    return`<div class="product-row">
-      <select style="flex:1;min-width:0;margin:0;font-size:13px" onchange="updateProductSku(${i},this.value)">
-        ${PRODUCTS.map(pr=>`<option value="${pr.sku}"${pr.sku===row.sku?' selected':''}>${pr.name}</option>`).join('')}
-      </select>
-      <input type="number" style="width:65px;margin:0;font-size:13px" min="0.1" step="0.1" value="${row.qty}" onchange="updateProductQty(${i},this.value)">
+    const p=PRODUCTS.find(x=>x.sku===row.sku);
+    return`<div class="product-row" style="flex-wrap:wrap;gap:6px">
+      <div style="flex:1;min-width:200px;position:relative">
+        <input type="text" class="product-search-input" placeholder="Search product..." value="${row.searchText||p?.name||''}" oninput="filterProducts(${i},this.value)" onfocus="showProductDropdown(${i})" style="width:100%;font-size:13px">
+        <div id="pdrop-${i}" class="product-dropdown"></div>
+      </div>
+      <input type="number" style="width:65px;margin:0;font-size:13px;flex-shrink:0" min="0.1" step="0.1" value="${row.qty}" onchange="updateProductQty(${i},this.value)">
       <div style="display:flex;border:1px solid #ddd;border-radius:8px;overflow:hidden;flex-shrink:0">
         <button style="padding:6px 8px;font-size:12px;border:none;background:${row.unit==='m3'?'#2d7a3a':'#fff'};color:${row.unit==='m3'?'#fff':'#888'};cursor:pointer;font-family:inherit" onclick="setUnit(${i},'m3')">m3</button>
         <button style="padding:6px 8px;font-size:12px;border:none;background:${row.unit==='scoop'?'#2d7a3a':'#fff'};color:${row.unit==='scoop'?'#fff':'#888'};cursor:pointer;font-family:inherit" onclick="setUnit(${i},'scoop')">Scoop</button>
       </div>
-      ${productRows.length>1?`<button style="padding:5px 8px;font-size:12px;border:1px solid #c0392b;border-radius:8px;background:#fff;color:#c0392b;cursor:pointer" onclick="removeProductRow(${i})"><i class="ti ti-x"></i></button>`:''}
+      ${productRows.length>1?`<button style="padding:5px 8px;font-size:12px;border:1px solid #c0392b;border-radius:8px;background:#fff;color:#c0392b;cursor:pointer;flex-shrink:0" onclick="removeProductRow(${i})"><i class="ti ti-x"></i></button>`:''}
+      ${p?`<div style="font-size:12px;color:#888;width:100%;padding:0 2px">$${p.price} ea · ${p.name}</div>`:''}
     </div>`;
   }).join('');
   updateWeightSummary();
+  // Close dropdowns on outside click
+  document.addEventListener('click',closeAllDropdowns,{once:true});
 }
-function addProductRow(){productRows.push({sku:PRODUCTS[0]?.sku||'',qty:1,unit:'m3'});renderProductRows();}
+
+function filterProducts(i,val){
+  productRows[i].searchText=val;
+  const filtered=PRODUCTS.filter(p=>p.name.toLowerCase().includes(val.toLowerCase())||p.sku.toLowerCase().includes(val.toLowerCase())).slice(0,20);
+  const drop=document.getElementById('pdrop-'+i);
+  if(!filtered.length){drop.style.display='none';return;}
+  drop.innerHTML=filtered.map(p=>`<div class="product-option" onclick="selectProduct(${i},'${p.sku}')"><div>${p.name}</div><div class="price">SKU: ${p.sku} · $${p.price}</div></div>`).join('');
+  drop.style.display='block';
+}
+
+function showProductDropdown(i){
+  const row=productRows[i];
+  const val=row.searchText||'';
+  filterProducts(i,val);
+}
+
+function selectProduct(i,sku){
+  const p=PRODUCTS.find(x=>x.sku===sku);
+  productRows[i].sku=sku;
+  productRows[i].searchText=p?p.name:'';
+  const drop=document.getElementById('pdrop-'+i);
+  if(drop)drop.style.display='none';
+  renderProductRows();
+}
+
+function closeAllDropdowns(){
+  document.querySelectorAll('.product-dropdown').forEach(d=>d.style.display='none');
+}
+
+function addProductRow(){productRows.push({sku:PRODUCTS[0]?.sku||'',qty:1,unit:'m3',searchText:''});renderProductRows();}
 function removeProductRow(i){productRows.splice(i,1);renderProductRows();}
-function updateProductSku(i,sku){productRows[i].sku=sku;renderProductRows();}
 function updateProductQty(i,val){productRows[i].qty=parseFloat(val)||1;updateWeightSummary();}
 function setUnit(i,unit){productRows[i].unit=unit;renderProductRows();}
 function getM3(row){return row.unit==='scoop'?row.qty*SCOOP_TO_M3:row.qty;}
@@ -327,14 +391,36 @@ function updateWeightSummary(){
   const totalT=productRows.reduce((s,r)=>s+getTonnes(r),0);
   const totalM=productRows.reduce((s,r)=>s+getM3(r),0);
   const ws=document.getElementById('weight-summary');
-  if(totalT>0){
-    const rec=autoTruck(totalT);
-    const pct=Math.min(100,(totalT/rec.maxT)*100);
-    document.getElementById('weight-text').textContent=`Est. ${totalT.toFixed(2)}T / ${totalM.toFixed(1)}m3 - Recommended: ${rec.name}`;
-    const wf=document.getElementById('weight-fill');wf.style.width=pct+'%';wf.className='weight-fill'+(pct>90?' danger':pct>70?' warning':'');
-    ws.style.display='block';
-    const tr=document.getElementById('truck-rec');tr.textContent=`Recommended: ${rec.name} (${totalT.toFixed(2)}T of ${rec.maxT}T max)`;tr.style.display='block';
-  }else{ws.style.display='none';document.getElementById('truck-rec').style.display='none';}
+  if(totalT>0){const rec=autoTruck(totalT);const pct=Math.min(100,(totalT/rec.maxT)*100);document.getElementById('weight-text').textContent=`Est. ${totalT.toFixed(2)}T / ${totalM.toFixed(1)}m3 - Recommended: ${rec.name}`;const wf=document.getElementById('weight-fill');wf.style.width=pct+'%';wf.className='weight-fill'+(pct>90?' danger':pct>70?' warning':'');ws.style.display='block';const tr=document.getElementById('truck-rec');tr.textContent=`Recommended: ${rec.name} (${totalT.toFixed(2)}T of ${rec.maxT}T max)`;tr.style.display='block';}
+  else{ws.style.display='none';document.getElementById('truck-rec').style.display='none';}
+}
+
+// Address autocomplete using Nominatim
+let addrTimeout;
+async function onAddressInput(){
+  const val=document.getElementById('job-address').value;
+  detectZoneFromInput();
+  clearTimeout(addrTimeout);
+  if(val.length<4){document.getElementById('address-suggestions').style.display='none';return;}
+  addrTimeout=setTimeout(async()=>{
+    try{
+      const r=await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(val+', New Zealand')}&format=json&limit=5&countrycodes=nz`,{headers:{'Accept-Language':'en'}});
+      const data=await r.json();
+      const el=document.getElementById('address-suggestions');
+      if(!data.length){el.style.display='none';return;}
+      el.innerHTML=data.map(a=>`<div class="search-result" onclick="selectAddress('${a.display_name.replace(/'/g,'&#39;')}')">${a.display_name}</div>`).join('');
+      el.style.display='block';
+    }catch{}
+  },500);
+}
+
+function selectAddress(addr){
+  // Clean up the address - remove country etc
+  const parts=addr.split(',');
+  const cleaned=parts.slice(0,3).join(',').trim();
+  document.getElementById('job-address').value=cleaned;
+  document.getElementById('address-suggestions').style.display='none';
+  detectZoneFromInput();
 }
 
 function detectZone(addr,truck){const a=addr.toLowerCase();for(const z of ZONES){if(z.areas.some(area=>a.includes(area))){const isBig=truck==='Hino 700'||truck==='Hino 700 Truck and Trailer';return{zone:z.name,fee:isBig?z.big:z.mini};}}return null;}
@@ -365,35 +451,54 @@ function toggleNewContact(){const form=document.getElementById('new-contact-form
 async function confirmOrder(){
   const btn=document.getElementById('confirm-btn');const msg=document.getElementById('order-msg');msg.style.display='none';
   if(!currentContact){const name=document.getElementById('nc-name').value.trim();if(!name){showMsg(msg,'err','Please select or add a customer.');return;}btn.disabled=true;btn.innerHTML='<span class="spinner"></span> Saving...';try{const r=await fetch('/api/contacts',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,phone:document.getElementById('nc-phone').value.trim(),email:document.getElementById('nc-email').value.trim()})});const d=await r.json();if(d.error)throw new Error(d.error);currentContact=d;}catch(e){showMsg(msg,'err','Could not create contact: '+e.message);btn.disabled=false;btn.innerHTML='<i class="ti ti-check"></i> Add to deliveries';return;}}
-  if(!productRows.length){showMsg(msg,'err','Please add at least one product.');return;}
-  let addr='Ex Yard',zone='Ex Yard',zoneFee=0,truck='Ex Yard',time='09:00';
-  if(deliveryType==='delivered'){addr=document.getElementById('job-address').value.trim();if(!addr){showMsg(msg,'err','Please enter a delivery address.');return;}time=document.getElementById('delivery-time').value;const totalT=productRows.reduce((s,r)=>s+getTonnes(r),0);const truckSel=document.getElementById('truck-select').value;const rec=totalT>0?autoTruck(totalT).name:'Hino 300';truck=truckSel==='auto'?rec:truckSel;const zInfo=detectZone(addr,truck);zone=zInfo?zInfo.zone:'Zone 6 - Quote';zoneFee=zInfo?zInfo.fee:0;}
-  const lineItems=productRows.map(row=>{const p=PRODUCTS.find(x=>x.sku===row.sku);const m3=getM3(row);const qtyLabel=row.unit==='scoop'?`${row.qty} scoop${row.qty!==1?'s':''}`:`${m3.toFixed(2)}m3`;return{sku:row.sku,desc:`${p?p.name:row.sku} (${qtyLabel})`,qty:m3,price:p?p.price:0};});
-  deliveries.push({id:nextId++,contactId:currentContact.id,contactName:currentContact.name,contactPhone:currentContact.phone||'',contactEmail:currentContact.email||'',jobAddress:addr,deliveryType,time,notes:document.getElementById('delivery-notes').value.trim(),truck,zone,zoneFee,lineItems,done:false,invoiced:false,createdAt:new Date().toISOString()});
+  if(!productRows.length||!productRows[0].sku){showMsg(msg,'err','Please add at least one product.');return;}
+  let addr='Ex Yard',zone='Ex Yard',zoneFee=0,truck='Ex Yard',date='',time='09:00';
+  if(deliveryType==='delivered'){
+    addr=document.getElementById('job-address').value.trim();
+    if(!addr){showMsg(msg,'err','Please enter a delivery address.');return;}
+    date=document.getElementById('delivery-date').value;
+    time=document.getElementById('delivery-time').value;
+    const totalT=productRows.reduce((s,r)=>s+getTonnes(r),0);
+    const truckSel=document.getElementById('truck-select').value;
+    const rec=totalT>0?autoTruck(totalT).name:'Hino 300';
+    truck=truckSel==='auto'?rec:truckSel;
+    const zInfo=detectZone(addr,truck);
+    zone=zInfo?zInfo.zone:'Zone 6 - Quote';
+    zoneFee=zInfo?zInfo.fee:0;
+  } else {
+    date=document.getElementById('exyard-date').value;
+    time=document.getElementById('exyard-time').value;
+  }
+  const lineItems=productRows.filter(r=>r.sku).map(row=>{const p=PRODUCTS.find(x=>x.sku===row.sku);const m3=getM3(row);const qtyLabel=row.unit==='scoop'?`${row.qty} scoop${row.qty!==1?'s':''}`:`${m3.toFixed(2)}m3`;return{sku:row.sku,desc:`${p?p.name:row.sku} (${qtyLabel})`,qty:m3,price:p?p.price:0};});
+  deliveries.push({id:nextId++,contactId:currentContact.id,contactName:currentContact.name,contactPhone:currentContact.phone||'',contactEmail:currentContact.email||'',jobAddress:addr,deliveryType,date,time,notes:document.getElementById('delivery-notes').value.trim(),truck,zone,zoneFee,lineItems,done:false,invoiced:false,createdAt:new Date().toISOString()});
   save();
-  productRows=[{sku:PRODUCTS[0]?.sku||'',qty:1,unit:'m3'}];currentContact=null;
-  document.getElementById('contact-search').value='';document.getElementById('job-address').value='';document.getElementById('zone-result').style.display='none';document.getElementById('selected-contact').style.display='none';document.getElementById('new-contact-form').style.display='none';document.getElementById('new-contact-toggle').style.display='inline-flex';document.getElementById('new-contact-toggle').innerHTML='<i class="ti ti-user-plus"></i> Add new customer';document.getElementById('delivery-notes').value='';
-  setDeliveryType('delivered');renderProductRows();
+  productRows=[{sku:PRODUCTS[0]?.sku||'',qty:1,unit:'m3',searchText:''}];currentContact=null;
+  document.getElementById('contact-search').value='';document.getElementById('job-address').value='';document.getElementById('zone-result').style.display='none';document.getElementById('address-suggestions').style.display='none';document.getElementById('selected-contact').style.display='none';document.getElementById('new-contact-form').style.display='none';document.getElementById('new-contact-toggle').style.display='inline-flex';document.getElementById('new-contact-toggle').innerHTML='<i class="ti ti-user-plus"></i> Add new customer';document.getElementById('delivery-notes').value='';
+  setDeliveryType('delivered');setDefaultDate();renderProductRows();
   btn.disabled=false;btn.innerHTML='<i class="ti ti-check"></i> Add to deliveries';
   showMsg(msg,'ok','Delivery added for '+deliveries[deliveries.length-1].contactName);updateStats();
 }
 
-function updateStats(){const total=deliveries.length,done=deliveries.filter(d=>d.done).length;document.getElementById('d-total').textContent=total;document.getElementById('d-done').textContent=done;document.getElementById('d-pending').textContent=total-done;}
+function updateStats(){const total=deliveries.filter(d=>!d.invoiced).length,done=deliveries.filter(d=>d.done&&!d.invoiced).length;document.getElementById('d-total').textContent=total;document.getElementById('d-done').textContent=done;document.getElementById('d-pending').textContent=total-done;}
 function filterDeliveries(f,el){deliveryFilter=f;document.querySelectorAll('#tab-deliveries .tab').forEach(t=>t.classList.remove('active'));if(el)el.classList.add('active');renderDeliveries();}
 function truckBadge(truck){if(truck==='Hino 300')return'badge-h300';if(truck==='Hino 700')return'badge-h700';if(truck==='Hino 700 Truck and Trailer')return'badge-htt';return'badge-exyard';}
 
+function fmtDate(dateStr){if(!dateStr)return'';const d=new Date(dateStr+'T00:00:00');return d.toLocaleDateString('en-NZ',{weekday:'short',day:'numeric',month:'short'});}
+
 function renderDeliveries(){
-  updateStats();const items=deliveries.filter(d=>deliveryFilter==='all'||d.truck===deliveryFilter).sort((a,b)=>(a.time||'').localeCompare(b.time||''));
-  const el=document.getElementById('deliveries-list');if(!items.length){el.innerHTML='<div class="empty"><i class="ti ti-truck-off"></i>No deliveries yet</div>';return;}
-  el.innerHTML=items.map(d=>{const total=(d.lineItems||[]).reduce((s,li)=>s+li.qty*li.price,0)+d.zoneFee;return`<div class="delivery-card"><div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px"><div><div class="delivery-name">${d.contactName}</div><div class="delivery-meta">${d.jobAddress}</div><div class="delivery-meta">${d.time} - ${(d.lineItems||[]).map(li=>li.desc).join(', ')}</div></div><div style="text-align:right"><div style="font-weight:700">$${total.toFixed(0)}</div><div class="muted" style="font-size:11px">+GST</div></div></div><div class="delivery-badges"><span class="badge ${truckBadge(d.truck)}">${d.truck}</span>${d.deliveryType==='delivered'?`<span class="zone-pill">${d.zone}</span>`:'<span class="badge badge-exyard">Ex Yard</span>'}<span class="badge ${d.invoiced?'badge-invoiced':d.done?'badge-done':'badge-pending'}">${d.invoiced?'Invoiced':d.done?'Done':'Pending'}</span></div><div class="delivery-actions"><button class="btn btn-sm" onclick="toggleDone(${d.id})">${d.done?'<i class="ti ti-rotate-clockwise"></i> Undo':'<i class="ti ti-check"></i> Done'}</button>${d.deliveryType==='delivered'?`<a href="https://maps.google.com/maps?q=${encodeURIComponent(d.jobAddress)}" target="_blank" class="btn btn-sm"><i class="ti ti-map-pin"></i> Map</a>`:''}<button class="btn btn-sm btn-danger" onclick="deleteDelivery(${d.id})"><i class="ti ti-trash"></i></button></div></div>`;}).join('');
+  updateStats();
+  const items=deliveries.filter(d=>!d.invoiced&&(deliveryFilter==='all'||d.truck===deliveryFilter)).sort((a,b)=>{const da=(a.date||'9999')+'-'+(a.time||'');const db=(b.date||'9999')+'-'+(b.time||'');return da.localeCompare(db);});
+  const el=document.getElementById('deliveries-list');
+  if(!items.length){el.innerHTML='<div class="empty"><i class="ti ti-truck-off"></i>No deliveries yet</div>';return;}
+  el.innerHTML=items.map(d=>{const total=(d.lineItems||[]).reduce((s,li)=>s+li.qty*li.price,0)+d.zoneFee;return`<div class="delivery-card"><div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px"><div><div class="delivery-name">${d.contactName}</div><div class="delivery-meta">${d.date?fmtDate(d.date)+' ':''} ${d.time} · ${d.jobAddress}</div><div class="delivery-meta">${(d.lineItems||[]).map(li=>li.desc).join(', ')}</div></div><div style="text-align:right"><div style="font-weight:700">$${total.toFixed(0)}</div><div class="muted" style="font-size:11px">+GST</div></div></div><div class="delivery-badges"><span class="badge ${truckBadge(d.truck)}">${d.truck}</span>${d.deliveryType==='delivered'?`<span class="zone-pill">${d.zone}</span>`:'<span class="badge badge-exyard">Ex Yard</span>'}<span class="badge ${d.done?'badge-done':'badge-pending'}">${d.done?'Done':'Pending'}</span></div><div class="delivery-actions"><button class="btn btn-sm" onclick="toggleDone(${d.id})">${d.done?'<i class="ti ti-rotate-clockwise"></i> Undo':'<i class="ti ti-check"></i> Done'}</button>${d.deliveryType==='delivered'?`<a href="https://maps.google.com/maps?q=${encodeURIComponent(d.jobAddress)}" target="_blank" class="btn btn-sm"><i class="ti ti-map-pin"></i> Map</a>`:''}<button class="btn btn-sm btn-danger" onclick="deleteDelivery(${d.id})"><i class="ti ti-trash"></i></button></div></div>`;}).join('');
 }
 function toggleDone(id){const d=deliveries.find(x=>x.id===id);if(d){d.done=!d.done;save();renderDeliveries();renderInvoiceList();renderDriverList();}}
-function deleteDelivery(id){if(!confirm('Delete?'))return;deliveries=deliveries.filter(x=>x.id!==id);save();renderDeliveries();renderInvoiceList();}
+function deleteDelivery(id){if(!confirm('Delete?'))return;deliveries=deliveries.filter(x=>x.id!==id);save();renderDeliveries();renderInvoiceList();renderArchive();}
 
 function renderInvoiceList(){
   const pending=deliveries.filter(d=>!d.invoiced);const el=document.getElementById('invoice-list');
   if(!pending.length){el.innerHTML='<div class="empty"><i class="ti ti-file-check"></i>All deliveries invoiced</div>';document.getElementById('invoice-summary').style.display='none';return;}
-  el.innerHTML=pending.map(d=>{const total=(d.lineItems||[]).reduce((s,li)=>s+li.qty*li.price,0)+d.zoneFee;const sel=selectedForInvoice.has(d.id);return`<div class="delivery-card ${sel?'selected':''}" onclick="toggleInvoiceSelect(${d.id})"><div style="display:flex;align-items:center;gap:10px"><div style="width:22px;height:22px;border-radius:50%;border:2px solid ${sel?'#2d7a3a':'#ddd'};background:${sel?'#2d7a3a':'#fff'};display:flex;align-items:center;justify-content:center;flex-shrink:0">${sel?'<i class="ti ti-check" style="font-size:12px;color:#fff"></i>':''}</div><div style="flex:1"><div class="delivery-name">${d.contactName}</div><div class="delivery-meta">${d.jobAddress}</div><div class="delivery-badges" style="margin-top:6px"><span class="badge ${truckBadge(d.truck)}">${d.truck}</span>${d.deliveryType==='delivered'?`<span class="zone-pill">${d.zone} $${d.zoneFee}</span>`:'<span class="badge badge-exyard">Ex Yard</span>'}<span style="font-weight:700">$${total.toFixed(0)}+GST</span></div></div></div></div>`;}).join('');
+  el.innerHTML=pending.map(d=>{const total=(d.lineItems||[]).reduce((s,li)=>s+li.qty*li.price,0)+d.zoneFee;const sel=selectedForInvoice.has(d.id);return`<div class="delivery-card ${sel?'selected':''}" onclick="toggleInvoiceSelect(${d.id})"><div style="display:flex;align-items:center;gap:10px"><div style="width:22px;height:22px;border-radius:50%;border:2px solid ${sel?'#2d7a3a':'#ddd'};background:${sel?'#2d7a3a':'#fff'};display:flex;align-items:center;justify-content:center;flex-shrink:0">${sel?'<i class="ti ti-check" style="font-size:12px;color:#fff"></i>':''}</div><div style="flex:1"><div class="delivery-name">${d.contactName}</div><div class="delivery-meta">${d.date?fmtDate(d.date)+' ':''} ${d.jobAddress}</div><div class="delivery-badges" style="margin-top:6px"><span class="badge ${truckBadge(d.truck)}">${d.truck}</span>${d.deliveryType==='delivered'?`<span class="zone-pill">${d.zone} $${d.zoneFee}</span>`:'<span class="badge badge-exyard">Ex Yard</span>'}<span style="font-weight:700">$${total.toFixed(0)}+GST</span></div></div></div></div>`;}).join('');
   updateInvoiceSummary();
 }
 function toggleInvoiceSelect(id){if(selectedForInvoice.has(id))selectedForInvoice.delete(id);else selectedForInvoice.add(id);renderInvoiceList();}
@@ -403,18 +508,85 @@ async function createInvoice(){
   const sel=deliveries.filter(d=>selectedForInvoice.has(d.id));if(!sel.length)return;
   const btn=document.getElementById('create-inv-btn');const msg=document.getElementById('invoice-msg');msg.style.display='none';
   btn.disabled=true;btn.innerHTML='<span class="spinner"></span> Creating in Xero...';
-  try{const r=await fetch('/api/invoices',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({contactId:sel[0].contactId,contactName:sel[0].contactName,jobAddress:sel.map(d=>d.jobAddress).filter((v,i,a)=>a.indexOf(v)===i).join(', '),deliveries:sel})});const d=await r.json();if(d.error)throw new Error(d.error);sel.forEach(d=>d.invoiced=true);selectedForInvoice.clear();save();showMsg(msg,'ok','Draft invoice created in Xero! Ref: '+(d.invoiceNumber||d.invoiceId));renderInvoiceList();renderDeliveries();}
+  try{const r=await fetch('/api/invoices',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({contactId:sel[0].contactId,contactName:sel[0].contactName,jobAddress:sel.map(d=>d.jobAddress).filter((v,i,a)=>a.indexOf(v)===i).join(', '),deliveries:sel})});const d=await r.json();if(d.error)throw new Error(d.error);sel.forEach(d=>{d.invoiced=true;d.invoicedAt=new Date().toISOString();});selectedForInvoice.clear();save();showMsg(msg,'ok','Draft invoice created in Xero! Ref: '+(d.invoiceNumber||d.invoiceId));renderInvoiceList();renderDeliveries();renderArchive();}
   catch(e){showMsg(msg,'err','Failed: '+e.message);}
   btn.disabled=false;btn.innerHTML='<i class="ti ti-file-invoice"></i> Create draft invoice in Xero';
 }
 
+// DRIVER - collapsible day sections
 function filterDriver(truck,el){driverFilter=truck;document.querySelectorAll('#tab-driver .tab').forEach(t=>t.classList.remove('active'));if(el)el.classList.add('active');renderDriverList();}
+
+function getWeekDay(dateStr){if(!dateStr)return 6;const d=new Date(dateStr+'T00:00:00');return d.getDay();}
+
 function renderDriverList(){
-  const items=deliveries.filter(d=>d.truck===driverFilter&&d.deliveryType==='delivered').sort((a,b)=>(a.time||'').localeCompare(b.time||''));
-  const done=items.filter(d=>d.done).length;document.getElementById('drv-total').textContent=items.length;document.getElementById('drv-done').textContent=done;document.getElementById('drv-left').textContent=items.length-done;
-  const el=document.getElementById('driver-list');if(!items.length){el.innerHTML='<div class="empty"><i class="ti ti-mood-happy"></i>No deliveries for this truck</div>';return;}
-  el.innerHTML=items.map(d=>`<div class="delivery-card"><div style="display:flex;gap:10px;align-items:flex-start"><div style="width:26px;height:26px;border-radius:50%;border:2px solid ${d.done?'#2d7a3a':'#ddd'};background:${d.done?'#2d7a3a':'#fff'};display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;margin-top:2px" onclick="toggleDone(${d.id})">${d.done?'<i class="ti ti-check" style="font-size:13px;color:#fff"></i>':''}</div><div style="flex:1"><div class="delivery-name ${d.done?'muted':''}" style="${d.done?'text-decoration:line-through':''}">${d.contactName}</div><div class="delivery-meta">${d.time} - ${d.jobAddress}</div>${d.contactPhone?`<div class="delivery-meta"><i class="ti ti-phone" style="font-size:12px"></i> ${d.contactPhone}</div>`:''}<div class="delivery-badges" style="margin-top:6px"><span class="zone-pill">${d.zone}</span></div><div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px"><a href="https://maps.google.com/maps?q=${encodeURIComponent(d.jobAddress)}" target="_blank" class="btn btn-sm"><i class="ti ti-map-pin"></i> Navigate</a>${d.contactPhone?`<a href="tel:${d.contactPhone}" class="btn btn-sm"><i class="ti ti-phone"></i> Call</a>`:''}</div></div></div></div>`).join('');
+  const items=deliveries.filter(d=>d.truck===driverFilter&&d.deliveryType==='delivered'&&!d.invoiced);
+  const el=document.getElementById('driver-list');
+  if(!items.length){el.innerHTML='<div class="empty"><i class="ti ti-mood-happy"></i>No deliveries for this truck</div>';return;}
+
+  // Group by date
+  const byDate={};
+  items.forEach(d=>{const key=d.date||'unscheduled';if(!byDate[key])byDate[key]=[];byDate[key].push(d);});
+  const sortedDates=Object.keys(byDate).sort();
+
+  el.innerHTML=sortedDates.map(date=>{
+    const dayItems=byDate[date].sort((a,b)=>(a.time||'').localeCompare(b.time||''));
+    const done=dayItems.filter(d=>d.done).length;
+    const dateLabel=date==='unscheduled'?'Unscheduled':fmtDate(date);
+    const dayName=date==='unscheduled'?'':(DAYS[new Date(date+'T00:00:00').getDay()]);
+    const isToday=date===new Date().toISOString().split('T')[0];
+    return`<div class="day-section">
+      <div class="day-header" onclick="toggleDay('day-${date}')">
+        <h3>${dayName?dayName+' - ':''} ${dateLabel} ${isToday?'(Today)':''}</h3>
+        <span class="day-count">${done}/${dayItems.length} done <i class="ti ti-chevron-down"></i></span>
+      </div>
+      <div id="day-${date}" class="day-body${isToday?' open':''}">
+        ${dayItems.map(d=>`<div class="delivery-card" style="margin-bottom:8px"><div style="display:flex;gap:10px;align-items:flex-start"><div style="width:26px;height:26px;border-radius:50%;border:2px solid ${d.done?'#2d7a3a':'#ddd'};background:${d.done?'#2d7a3a':'#fff'};display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;margin-top:2px" onclick="toggleDone(${d.id})">${d.done?'<i class="ti ti-check" style="font-size:13px;color:#fff"></i>':''}</div><div style="flex:1"><div class="delivery-name ${d.done?'muted':''}" style="${d.done?'text-decoration:line-through':''}">${d.contactName}</div><div class="delivery-meta">${d.time} - ${d.jobAddress}</div>${d.contactPhone?`<div class="delivery-meta"><i class="ti ti-phone" style="font-size:12px"></i> ${d.contactPhone}</div>`:''}<div class="delivery-meta" style="font-size:12px">${(d.lineItems||[]).map(li=>li.desc).join(', ')}</div><div class="delivery-badges" style="margin-top:4px"><span class="zone-pill">${d.zone}</span></div><div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px"><a href="https://maps.google.com/maps?q=${encodeURIComponent(d.jobAddress)}" target="_blank" class="btn btn-sm"><i class="ti ti-map-pin"></i> Navigate</a>${d.contactPhone?`<a href="tel:${d.contactPhone}" class="btn btn-sm"><i class="ti ti-phone"></i> Call</a>`:''}</div></div></div></div>`).join('')}
+      </div>
+    </div>`;
+  }).join('');
 }
+
+function toggleDay(id){const el=document.getElementById(id);if(el)el.classList.toggle('open');}
+
+// ARCHIVE - invoiced deliveries by week
+function getWeekNumber(dateStr){
+  const d=new Date(dateStr||Date.now());
+  d.setHours(0,0,0,0);d.setDate(d.getDate()+4-(d.getDay()||7));
+  const yearStart=new Date(d.getFullYear(),0,1);
+  return{week:Math.ceil((((d-yearStart)/86400000)+1)/7),year:d.getFullYear()};
+}
+
+function renderArchive(){
+  const invoiced=deliveries.filter(d=>d.invoiced);
+  const el=document.getElementById('archive-list');
+  if(!invoiced.length){el.innerHTML='<div class="empty"><i class="ti ti-archive"></i>No completed deliveries yet</div>';return;}
+
+  // Group by week
+  const byWeek={};
+  invoiced.forEach(d=>{
+    const {week,year}=getWeekNumber(d.invoicedAt||d.createdAt);
+    const key=`${year}-W${String(week).padStart(2,'0')}`;
+    if(!byWeek[key])byWeek[key]={week,year,items:[]};
+    byWeek[key].items.push(d);
+  });
+
+  const sortedWeeks=Object.keys(byWeek).sort().reverse();
+  el.innerHTML=sortedWeeks.map(key=>{
+    const {week,year,items}=byWeek[key];
+    const total=items.reduce((s,d)=>(d.lineItems||[]).reduce((ss,li)=>ss+li.qty*li.price,0)+d.zoneFee+s,0);
+    return`<div class="week-section">
+      <div class="week-header" onclick="toggleWeek('week-${key}')">
+        <h3>Week ${week}, ${year}</h3>
+        <span style="font-size:12px;color:#888">${items.length} deliveries · $${total.toFixed(0)}+GST <i class="ti ti-chevron-down"></i></span>
+      </div>
+      <div id="week-${key}" class="week-body">
+        ${items.map(d=>{const tot=(d.lineItems||[]).reduce((s,li)=>s+li.qty*li.price,0)+d.zoneFee;return`<div class="delivery-card" style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;align-items:flex-start"><div><div class="delivery-name">${d.contactName}</div><div class="delivery-meta">${d.date?fmtDate(d.date)+' ':''} ${d.jobAddress}</div><div class="delivery-meta">${(d.lineItems||[]).map(li=>li.desc).join(', ')}</div><div class="delivery-badges" style="margin-top:6px"><span class="badge badge-invoiced">Invoiced</span><span class="badge ${truckBadge(d.truck)}">${d.truck}</span></div></div><div style="text-align:right"><div style="font-weight:700">$${tot.toFixed(0)}</div><button class="btn btn-sm btn-danger" style="margin-top:6px" onclick="deleteDelivery(${d.id})"><i class="ti ti-trash"></i></button></div></div></div>`;}).join('')}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleWeek(id){const el=document.getElementById(id);if(el)el.classList.toggle('open');}
 
 function showMsg(el,type,text){el.className='alert alert-'+(type==='ok'?'ok':'err');el.textContent=text;el.style.display='block';if(type==='ok')setTimeout(()=>el.style.display='none',4000);}
 window.addEventListener('DOMContentLoaded',checkAuth);
