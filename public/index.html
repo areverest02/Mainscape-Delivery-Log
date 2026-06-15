@@ -8,7 +8,7 @@
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f0; color: #1a1a1a; min-height: 100vh; }
-.app { max-width: 480px; margin: 0 auto; padding: 0; min-height: 100vh; background: #fff; }
+.app { max-width: 480px; margin: 0 auto; min-height: 100vh; background: #fff; }
 .screen { display: none; }
 .screen.active { display: block; }
 .header { background: #fff; border-bottom: 1px solid #e8e8e2; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 10; }
@@ -78,10 +78,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: #2d7a3a
 .toggle-group { display: flex; background: #f5f5f0; border-radius: 8px; padding: 3px; margin-bottom: 12px; }
 .toggle-opt { flex: 1; text-align: center; padding: 8px; font-size: 14px; cursor: pointer; border-radius: 6px; border: none; background: none; color: #888; font-weight: 500; font-family: inherit; transition: all 0.15s; }
 .toggle-opt.active { background: #2d7a3a; color: #fff; }
-.unit-toggle { display: flex; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; }
-.unit-btn { flex: 1; padding: 9px 6px; font-size: 13px; border: none; background: #fff; cursor: pointer; font-family: inherit; color: #888; }
-.unit-btn.active { background: #2d7a3a; color: #fff; }
-.product-row { display: flex; gap: 6px; align-items: center; margin-bottom: 8px; padding: 8px; background: #f9f9f7; border-radius: 8px; flex-wrap: wrap; }
+.product-row { display: flex; gap: 6px; align-items: center; margin-bottom: 8px; padding: 8px; background: #f9f9f7; border-radius: 8px; }
 .weight-bar { height: 6px; background: #e8e8e2; border-radius: 3px; margin: 6px 0; overflow: hidden; }
 .weight-fill { height: 100%; border-radius: 3px; background: #2d7a3a; transition: width 0.3s; }
 .weight-fill.warning { background: #f59e0b; }
@@ -99,7 +96,6 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: #2d7a3a
       <div id="login-msg" class="alert alert-info" style="display:none"></div>
       <button class="btn btn-primary btn-full" onclick="connectXero()"><i class="ti ti-plug"></i> Connect to Xero</button>
       <button class="btn btn-full" onclick="showApp()" style="margin-top:8px">Continue without Xero</button>
-      <p style="margin-top:16px;font-size:12px;color:#aaa">You will be redirected to Xero to log in securely</p>
     </div>
   </div>
 </div>
@@ -117,7 +113,6 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: #2d7a3a
       <button class="nav-btn" id="nav-driver" onclick="showTab('driver')"><i class="ti ti-steering-wheel"></i><span>Driver</span></button>
     </div>
 
-    <!-- NEW ORDER -->
     <div id="tab-orders" class="content">
       <div class="section-hdr">Customer</div>
       <div class="card">
@@ -143,8 +138,9 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: #2d7a3a
 
       <div class="section-hdr">Products</div>
       <div class="card">
-        <div id="product-rows"></div>
-        <button class="btn btn-sm" onclick="addProductRow()"><i class="ti ti-plus"></i> Add product</button>
+        <div id="products-loading" class="muted" style="text-align:center;padding:12px">Loading products from Xero...</div>
+        <div id="product-rows" style="display:none"></div>
+        <button class="btn btn-sm" onclick="addProductRow()" id="add-product-btn" style="display:none"><i class="ti ti-plus"></i> Add product</button>
         <div id="weight-summary" style="display:none;margin-top:12px;padding:10px;background:#f0fdf4;border-radius:8px">
           <div style="font-size:13px;color:#166534;margin-bottom:4px" id="weight-text"></div>
           <div class="weight-bar"><div class="weight-fill" id="weight-fill" style="width:0%"></div></div>
@@ -191,7 +187,6 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: #2d7a3a
       <button class="btn btn-primary btn-full" onclick="confirmOrder()" id="confirm-btn"><i class="ti ti-check"></i> Add to deliveries</button>
     </div>
 
-    <!-- DELIVERIES -->
     <div id="tab-deliveries" class="content" style="display:none">
       <div class="stats-row">
         <div class="stat"><div class="stat-num" id="d-total">0</div><div class="stat-label">Total</div></div>
@@ -207,7 +202,6 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: #2d7a3a
       <div id="deliveries-list"></div>
     </div>
 
-    <!-- INVOICE -->
     <div id="tab-invoice" class="content" style="display:none">
       <div class="section-hdr">Select deliveries to invoice</div>
       <p class="muted" style="margin-bottom:12px;font-size:13px">Tap deliveries for the same customer then create one Xero invoice.</p>
@@ -222,7 +216,6 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: #2d7a3a
       </div>
     </div>
 
-    <!-- DRIVER -->
     <div id="tab-driver" class="content" style="display:none">
       <div class="tabs">
         <button class="tab active" onclick="filterDriver('Hino 300',this)">Hino 300</button>
@@ -248,87 +241,86 @@ const ZONES=[
   {name:'Zone 5',areas:['marshland','parklands','burwood','new brighton','bromley'],mini:111,big:175}
 ];
 const TRUCKS=[{name:'Hino 300',maxT:6},{name:'Hino 700',maxT:12},{name:'Hino 700 Truck and Trailer',maxT:30}];
-const PRODUCTS=[
-  {sku:'SB10',name:'Standard Bark 10-25mm',price:52,conv:null},
-  {sku:'PB30',name:'Premium Bark 30-50mm',price:65,conv:null},
-  {sku:'FB',name:'Forest Floor',price:40,conv:null},
-  {sku:'BB',name:'Black Bark',price:58,conv:null},
-  {sku:'TMB',name:'Tree Mulch',price:18,conv:null},
-  {sku:'PB',name:'Premium Bark',price:52,conv:null},
-  {sku:'BC40',name:'Black Chip 40mm',price:95,conv:1.5},
-  {sku:'BC20',name:'Black Chip 20mm',price:95,conv:1.5},
-  {sku:'WLC15',name:'Waipapa Lime Chip 15mm',price:85,conv:1.45},
-  {sku:'WLC20',name:'Waipapa Lime Chip 20mm',price:85,conv:1.43},
-  {sku:'TDC12',name:'Teddington Chip 12-20mm',price:77,conv:1.65},
-  {sku:'TDC20',name:'Teddington Chip 20-40mm',price:71,conv:1.65},
-  {sku:'SL12',name:'Springfield Lime 12-20mm',price:73,conv:null},
-  {sku:'DC20',name:'Duvachelle Chip 20mm',price:66,conv:null},
-  {sku:'DC40',name:'Duvachelle Chip 40mm',price:66,conv:null},
-  {sku:'DDC12',name:'Driveway/Drainage Chip 12mm',price:44,conv:1.4},
-  {sku:'DDC19',name:'Driveway/Drainage Chip 19mm',price:48,conv:1.4},
-  {sku:'WP14',name:'White Pebble 14mm',price:150,conv:1.6},
-  {sku:'WP20',name:'White Pebble 20mm',price:150,conv:1.6},
-  {sku:'OGP10',name:'Oamaru Golden Pebble 10-19mm',price:92,conv:1.5},
-  {sku:'BP',name:'Balclutha 3/8 Pebble',price:80,conv:null},
-  {sku:'CS20',name:'Crawford Hill Schist 20-40mm',price:150,conv:1.5},
-  {sku:'WS20',name:'Westland Schist 20-40mm',price:115,conv:1.5},
-  {sku:'AP20',name:'AP-20',price:37,conv:1.65},
-  {sku:'AP40',name:'AP-40',price:33,conv:1.75},
-  {sku:'CD',name:'Crusher Dust',price:48,conv:1.5},
-  {sku:'PM',name:'Premix',price:42,conv:1.7},
-  {sku:'R19',name:'19mm Rounds',price:38,conv:1.6},
-  {sku:'T24',name:'24/40 Tailings',price:36,conv:1.6},
-  {sku:'SS',name:'Sandpit Sand',price:46,conv:1.55},
-  {sku:'SSOIL',name:'Screened Soil',price:31,conv:1.2},
-  {sku:'USSOIL',name:'Unscreened Soil',price:18,conv:1.2},
-  {sku:'GS',name:'Garden Soil',price:33,conv:1.2},
-  {sku:'VM',name:'Vege Mix',price:35,conv:1.2},
-  {sku:'LE',name:'Living Earth',price:20,conv:1.2},
-  {sku:'GGC',name:'Garden Gro Compost',price:41,conv:1.2},
-  {sku:'MC',name:'Mushroom Compost',price:24,conv:1.2},
-  {sku:'NB',name:"Nature's Best",price:27,conv:1.2},
-  {sku:'PS',name:"Pig n Sawdust",price:25,conv:1.2}
-];
 const SCOOP_TO_M3=1/3;
+
+// Products will be loaded from Xero
+let PRODUCTS=[];
+
+// Conversion rates by keyword (tonnes per m3)
+const CONV_RATES={
+  'bark':null,'mulch':null,'firewood':null,'peastraw':null,'weed':null,
+  'chip':1.5,'schist':1.5,'pebble':1.6,'aggregate':1.65,'ap20':1.65,'ap40':1.75,
+  'crusher':1.5,'premix':1.7,'rounds':1.6,'tailings':1.6,'sand':1.55,
+  'soil':1.2,'compost':1.2,'vege':1.2,'garden':1.2,'topdress':1.2,'living earth':1.2
+};
+
+function getConvRate(productName){
+  const n=productName.toLowerCase();
+  for(const [key,val] of Object.entries(CONV_RATES)){if(n.includes(key))return val;}
+  return null;
+}
+
 let deliveries=JSON.parse(localStorage.getItem('ms_dlv')||'[]');
 let nextId=parseInt(localStorage.getItem('ms_nid')||'1');
 let currentContact=null,deliveryType='delivered',driverFilter='Hino 300',deliveryFilter='all',selectedForInvoice=new Set();
-let productRows=[{sku:'SSOIL',qty:1,unit:'m3'}];
+let productRows=[{sku:'',qty:1,unit:'m3'}];
 function save(){localStorage.setItem('ms_dlv',JSON.stringify(deliveries));localStorage.setItem('ms_nid',String(nextId));}
+
+async function loadProducts(){
+  try{
+    const r=await fetch('/api/products',{credentials:'include'});
+    const d=await r.json();
+    if(d.products&&d.products.length){
+      PRODUCTS=d.products;
+      if(!productRows[0].sku&&PRODUCTS.length)productRows[0].sku=PRODUCTS[0].sku;
+    }
+  }catch(e){console.log('Products load failed, using defaults');}
+  document.getElementById('products-loading').style.display='none';
+  document.getElementById('product-rows').style.display='block';
+  document.getElementById('add-product-btn').style.display='inline-flex';
+  renderProductRows();
+}
 
 async function checkAuth(){
   try{const r=await fetch('/auth/status',{credentials:'include'});const d=await r.json();if(d.connected){showApp();}else{const p=new URLSearchParams(window.location.search);if(p.get('error')){document.getElementById('login-msg').textContent='Connection failed. Please try again.';document.getElementById('login-msg').style.display='block';}document.getElementById('screen-login').classList.add('active');}}catch{document.getElementById('screen-login').classList.add('active');}
 }
 function connectXero(){window.location.href='/auth/xero';}
-function showApp(){document.getElementById('screen-login').classList.remove('active');document.getElementById('screen-app').classList.add('active');renderProductRows();renderDeliveries();renderInvoiceList();renderDriverList();updateStats();}
+function showApp(){
+  document.getElementById('screen-login').classList.remove('active');
+  document.getElementById('screen-app').classList.add('active');
+  loadProducts();
+  renderDeliveries();renderInvoiceList();renderDriverList();updateStats();
+}
 async function logout(){await fetch('/auth/logout',{credentials:'include'});window.location.reload();}
 function showTab(tab){['orders','deliveries','invoice','driver'].forEach(t=>{document.getElementById('tab-'+t).style.display=t===tab?'block':'none';document.getElementById('nav-'+t).classList.toggle('active',t===tab);});if(tab==='deliveries')renderDeliveries();if(tab==='invoice')renderInvoiceList();if(tab==='driver')renderDriverList();}
-
 function setDeliveryType(type){deliveryType=type;document.getElementById('toggle-delivered').classList.toggle('active',type==='delivered');document.getElementById('toggle-exyard').classList.toggle('active',type==='exyard');document.getElementById('delivery-details').style.display=type==='delivered'?'block':'none';}
 
 function renderProductRows(){
+  if(!PRODUCTS.length)return;
   const el=document.getElementById('product-rows');
-  el.innerHTML=productRows.map((row,i)=>`
-    <div class="product-row">
+  el.innerHTML=productRows.map((row,i)=>{
+    const p=PRODUCTS.find(x=>x.sku===row.sku)||PRODUCTS[0];
+    return`<div class="product-row">
       <select style="flex:1;min-width:0;margin:0;font-size:13px" onchange="updateProductSku(${i},this.value)">
-        ${PRODUCTS.map(p=>`<option value="${p.sku}"${p.sku===row.sku?' selected':''}>${p.name}</option>`).join('')}
+        ${PRODUCTS.map(pr=>`<option value="${pr.sku}"${pr.sku===row.sku?' selected':''}>${pr.name}</option>`).join('')}
       </select>
       <input type="number" style="width:65px;margin:0;font-size:13px" min="0.1" step="0.1" value="${row.qty}" onchange="updateProductQty(${i},this.value)">
       <div style="display:flex;border:1px solid #ddd;border-radius:8px;overflow:hidden;flex-shrink:0">
-        <button style="padding:6px 8px;font-size:12px;border:none;background:${row.unit==='m3'?'#2d7a3a':'#fff'};color:${row.unit==='m3'?'#fff':'#888'};cursor:pointer;font-family:inherit" onclick="setUnit(${i},'m3')">m³</button>
+        <button style="padding:6px 8px;font-size:12px;border:none;background:${row.unit==='m3'?'#2d7a3a':'#fff'};color:${row.unit==='m3'?'#fff':'#888'};cursor:pointer;font-family:inherit" onclick="setUnit(${i},'m3')">m3</button>
         <button style="padding:6px 8px;font-size:12px;border:none;background:${row.unit==='scoop'?'#2d7a3a':'#fff'};color:${row.unit==='scoop'?'#fff':'#888'};cursor:pointer;font-family:inherit" onclick="setUnit(${i},'scoop')">Scoop</button>
       </div>
       ${productRows.length>1?`<button style="padding:5px 8px;font-size:12px;border:1px solid #c0392b;border-radius:8px;background:#fff;color:#c0392b;cursor:pointer" onclick="removeProductRow(${i})"><i class="ti ti-x"></i></button>`:''}
-    </div>`).join('');
+    </div>`;
+  }).join('');
   updateWeightSummary();
 }
-function addProductRow(){productRows.push({sku:'SSOIL',qty:1,unit:'m3'});renderProductRows();}
+function addProductRow(){productRows.push({sku:PRODUCTS[0]?.sku||'',qty:1,unit:'m3'});renderProductRows();}
 function removeProductRow(i){productRows.splice(i,1);renderProductRows();}
 function updateProductSku(i,sku){productRows[i].sku=sku;renderProductRows();}
 function updateProductQty(i,val){productRows[i].qty=parseFloat(val)||1;updateWeightSummary();}
 function setUnit(i,unit){productRows[i].unit=unit;renderProductRows();}
 function getM3(row){return row.unit==='scoop'?row.qty*SCOOP_TO_M3:row.qty;}
-function getTonnes(row){const p=PRODUCTS.find(x=>x.sku===row.sku);if(!p||!p.conv)return 0;return getM3(row)*p.conv;}
+function getTonnes(row){const p=PRODUCTS.find(x=>x.sku===row.sku);if(!p)return 0;const conv=getConvRate(p.name);if(!conv)return 0;return getM3(row)*conv;}
 function autoTruck(t){for(const tk of TRUCKS){if(t<=tk.maxT)return tk;}return TRUCKS[TRUCKS.length-1];}
 
 function updateWeightSummary(){
@@ -338,22 +330,14 @@ function updateWeightSummary(){
   if(totalT>0){
     const rec=autoTruck(totalT);
     const pct=Math.min(100,(totalT/rec.maxT)*100);
-    document.getElementById('weight-text').textContent=`Est. ${totalT.toFixed(2)}T / ${totalM.toFixed(1)}m³ — Recommended: ${rec.name}`;
-    const wf=document.getElementById('weight-fill');
-    wf.style.width=pct+'%';
-    wf.className='weight-fill'+(pct>90?' danger':pct>70?' warning':'');
+    document.getElementById('weight-text').textContent=`Est. ${totalT.toFixed(2)}T / ${totalM.toFixed(1)}m3 - Recommended: ${rec.name}`;
+    const wf=document.getElementById('weight-fill');wf.style.width=pct+'%';wf.className='weight-fill'+(pct>90?' danger':pct>70?' warning':'');
     ws.style.display='block';
-    const tr=document.getElementById('truck-rec');
-    tr.textContent=`Recommended: ${rec.name} (${totalT.toFixed(2)}T of ${rec.maxT}T max)`;
-    tr.style.display='block';
-  } else {
-    ws.style.display='none';
-    document.getElementById('truck-rec').style.display='none';
-  }
+    const tr=document.getElementById('truck-rec');tr.textContent=`Recommended: ${rec.name} (${totalT.toFixed(2)}T of ${rec.maxT}T max)`;tr.style.display='block';
+  }else{ws.style.display='none';document.getElementById('truck-rec').style.display='none';}
 }
 
 function detectZone(addr,truck){const a=addr.toLowerCase();for(const z of ZONES){if(z.areas.some(area=>a.includes(area))){const isBig=truck==='Hino 700'||truck==='Hino 700 Truck and Trailer';return{zone:z.name,fee:isBig?z.big:z.mini};}}return null;}
-
 function detectZoneFromInput(){
   const addr=document.getElementById('job-address').value;
   const truckSel=document.getElementById('truck-select').value;
@@ -369,57 +353,25 @@ function detectZoneFromInput(){
 
 let searchTimeout;
 function searchContacts(){
-  clearTimeout(searchTimeout);
-  const q=document.getElementById('contact-search').value.trim();
+  clearTimeout(searchTimeout);const q=document.getElementById('contact-search').value.trim();
   if(q.length<2){document.getElementById('search-results').style.display='none';return;}
   searchTimeout=setTimeout(async()=>{
     try{const r=await fetch('/api/contacts/search?q='+encodeURIComponent(q),{credentials:'include'});const d=await r.json();const el=document.getElementById('search-results');if(!d.contacts?.length){el.style.display='none';return;}el.innerHTML=d.contacts.map(c=>`<div class="search-result" onclick="selectContact(this)" data-id="${c.id}" data-name="${c.name.replace(/"/g,'&quot;')}" data-phone="${(c.phone||'').replace(/"/g,'&quot;')}" data-email="${(c.email||'').replace(/"/g,'&quot;')}"><div class="search-result-name">${c.name}</div><div class="search-result-sub">${[c.phone,c.email].filter(Boolean).join(' - ')}</div></div>`).join('');el.style.display='block';}catch{}
   },300);
 }
-function selectContact(el){
-  const c={id:el.dataset.id,name:el.dataset.name,phone:el.dataset.phone,email:el.dataset.email};
-  currentContact=c;
-  document.getElementById('contact-search').value=c.name;
-  document.getElementById('search-results').style.display='none';
-  document.getElementById('selected-contact').style.display='block';
-  document.getElementById('selected-contact-info').innerHTML=`<i class="ti ti-user-check"></i> <strong>${c.name}</strong>${c.phone?' - '+c.phone:''}`;
-  document.getElementById('new-contact-form').style.display='none';
-  document.getElementById('new-contact-toggle').style.display='none';
-}
+function selectContact(el){const c={id:el.dataset.id,name:el.dataset.name,phone:el.dataset.phone,email:el.dataset.email};currentContact=c;document.getElementById('contact-search').value=c.name;document.getElementById('search-results').style.display='none';document.getElementById('selected-contact').style.display='block';document.getElementById('selected-contact-info').innerHTML=`<i class="ti ti-user-check"></i> <strong>${c.name}</strong>${c.phone?' - '+c.phone:''}`;document.getElementById('new-contact-form').style.display='none';document.getElementById('new-contact-toggle').style.display='none';}
 function toggleNewContact(){const form=document.getElementById('new-contact-form');const showing=form.style.display!=='none';form.style.display=showing?'none':'block';document.getElementById('new-contact-toggle').innerHTML=showing?'<i class="ti ti-user-plus"></i> Add new customer':'<i class="ti ti-x"></i> Cancel';if(showing)currentContact=null;}
 
 async function confirmOrder(){
   const btn=document.getElementById('confirm-btn');const msg=document.getElementById('order-msg');msg.style.display='none';
-  if(!currentContact){
-    const name=document.getElementById('nc-name').value.trim();
-    if(!name){showMsg(msg,'err','Please select or add a customer.');return;}
-    btn.disabled=true;btn.innerHTML='<span class="spinner"></span> Saving...';
-    try{const r=await fetch('/api/contacts',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,phone:document.getElementById('nc-phone').value.trim(),email:document.getElementById('nc-email').value.trim()})});const d=await r.json();if(d.error)throw new Error(d.error);currentContact=d;}
-    catch(e){showMsg(msg,'err','Could not create contact: '+e.message);btn.disabled=false;btn.innerHTML='<i class="ti ti-check"></i> Add to deliveries';return;}
-  }
+  if(!currentContact){const name=document.getElementById('nc-name').value.trim();if(!name){showMsg(msg,'err','Please select or add a customer.');return;}btn.disabled=true;btn.innerHTML='<span class="spinner"></span> Saving...';try{const r=await fetch('/api/contacts',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,phone:document.getElementById('nc-phone').value.trim(),email:document.getElementById('nc-email').value.trim()})});const d=await r.json();if(d.error)throw new Error(d.error);currentContact=d;}catch(e){showMsg(msg,'err','Could not create contact: '+e.message);btn.disabled=false;btn.innerHTML='<i class="ti ti-check"></i> Add to deliveries';return;}}
   if(!productRows.length){showMsg(msg,'err','Please add at least one product.');return;}
   let addr='Ex Yard',zone='Ex Yard',zoneFee=0,truck='Ex Yard',time='09:00';
-  if(deliveryType==='delivered'){
-    addr=document.getElementById('job-address').value.trim();
-    if(!addr){showMsg(msg,'err','Please enter a delivery address.');return;}
-    time=document.getElementById('delivery-time').value;
-    const totalT=productRows.reduce((s,r)=>s+getTonnes(r),0);
-    const truckSel=document.getElementById('truck-select').value;
-    const rec=totalT>0?autoTruck(totalT).name:'Hino 300';
-    truck=truckSel==='auto'?rec:truckSel;
-    const zInfo=detectZone(addr,truck);
-    zone=zInfo?zInfo.zone:'Zone 6 - Quote';
-    zoneFee=zInfo?zInfo.fee:0;
-  }
-  const lineItems=productRows.map(row=>{
-    const p=PRODUCTS.find(x=>x.sku===row.sku);
-    const m3=getM3(row);
-    const qtyLabel=row.unit==='scoop'?`${row.qty} scoop${row.qty!==1?'s':''}`:`${m3.toFixed(2)}m3`;
-    return{sku:row.sku,desc:`${p.name} (${qtyLabel})`,qty:m3,price:p.price};
-  });
+  if(deliveryType==='delivered'){addr=document.getElementById('job-address').value.trim();if(!addr){showMsg(msg,'err','Please enter a delivery address.');return;}time=document.getElementById('delivery-time').value;const totalT=productRows.reduce((s,r)=>s+getTonnes(r),0);const truckSel=document.getElementById('truck-select').value;const rec=totalT>0?autoTruck(totalT).name:'Hino 300';truck=truckSel==='auto'?rec:truckSel;const zInfo=detectZone(addr,truck);zone=zInfo?zInfo.zone:'Zone 6 - Quote';zoneFee=zInfo?zInfo.fee:0;}
+  const lineItems=productRows.map(row=>{const p=PRODUCTS.find(x=>x.sku===row.sku);const m3=getM3(row);const qtyLabel=row.unit==='scoop'?`${row.qty} scoop${row.qty!==1?'s':''}`:`${m3.toFixed(2)}m3`;return{sku:row.sku,desc:`${p?p.name:row.sku} (${qtyLabel})`,qty:m3,price:p?p.price:0};});
   deliveries.push({id:nextId++,contactId:currentContact.id,contactName:currentContact.name,contactPhone:currentContact.phone||'',contactEmail:currentContact.email||'',jobAddress:addr,deliveryType,time,notes:document.getElementById('delivery-notes').value.trim(),truck,zone,zoneFee,lineItems,done:false,invoiced:false,createdAt:new Date().toISOString()});
   save();
-  productRows=[{sku:'SSOIL',qty:1,unit:'m3'}];currentContact=null;
+  productRows=[{sku:PRODUCTS[0]?.sku||'',qty:1,unit:'m3'}];currentContact=null;
   document.getElementById('contact-search').value='';document.getElementById('job-address').value='';document.getElementById('zone-result').style.display='none';document.getElementById('selected-contact').style.display='none';document.getElementById('new-contact-form').style.display='none';document.getElementById('new-contact-toggle').style.display='inline-flex';document.getElementById('new-contact-toggle').innerHTML='<i class="ti ti-user-plus"></i> Add new customer';document.getElementById('delivery-notes').value='';
   setDeliveryType('delivered');renderProductRows();
   btn.disabled=false;btn.innerHTML='<i class="ti ti-check"></i> Add to deliveries';
@@ -431,21 +383,15 @@ function filterDeliveries(f,el){deliveryFilter=f;document.querySelectorAll('#tab
 function truckBadge(truck){if(truck==='Hino 300')return'badge-h300';if(truck==='Hino 700')return'badge-h700';if(truck==='Hino 700 Truck and Trailer')return'badge-htt';return'badge-exyard';}
 
 function renderDeliveries(){
-  updateStats();
-  const items=deliveries.filter(d=>deliveryFilter==='all'||d.truck===deliveryFilter).sort((a,b)=>(a.time||'').localeCompare(b.time||''));
-  const el=document.getElementById('deliveries-list');
-  if(!items.length){el.innerHTML='<div class="empty"><i class="ti ti-truck-off"></i>No deliveries yet</div>';return;}
-  el.innerHTML=items.map(d=>{
-    const total=(d.lineItems||[]).reduce((s,li)=>s+li.qty*li.price,0)+d.zoneFee;
-    return`<div class="delivery-card"><div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px"><div><div class="delivery-name">${d.contactName}</div><div class="delivery-meta">${d.jobAddress}</div><div class="delivery-meta">${d.time} - ${(d.lineItems||[]).map(li=>li.desc).join(', ')}</div></div><div style="text-align:right"><div style="font-weight:700">$${total.toFixed(0)}</div><div class="muted" style="font-size:11px">+GST</div></div></div><div class="delivery-badges"><span class="badge ${truckBadge(d.truck)}">${d.truck}</span>${d.deliveryType==='delivered'?`<span class="zone-pill">${d.zone}</span>`:'<span class="badge badge-exyard">Ex Yard</span>'}<span class="badge ${d.invoiced?'badge-invoiced':d.done?'badge-done':'badge-pending'}">${d.invoiced?'Invoiced':d.done?'Done':'Pending'}</span></div><div class="delivery-actions"><button class="btn btn-sm" onclick="toggleDone(${d.id})">${d.done?'<i class="ti ti-rotate-clockwise"></i> Undo':'<i class="ti ti-check"></i> Done'}</button>${d.deliveryType==='delivered'?`<a href="https://maps.google.com/maps?q=${encodeURIComponent(d.jobAddress)}" target="_blank" class="btn btn-sm"><i class="ti ti-map-pin"></i> Map</a>`:''}<button class="btn btn-sm btn-danger" onclick="deleteDelivery(${d.id})"><i class="ti ti-trash"></i></button></div></div>`;
-  }).join('');
+  updateStats();const items=deliveries.filter(d=>deliveryFilter==='all'||d.truck===deliveryFilter).sort((a,b)=>(a.time||'').localeCompare(b.time||''));
+  const el=document.getElementById('deliveries-list');if(!items.length){el.innerHTML='<div class="empty"><i class="ti ti-truck-off"></i>No deliveries yet</div>';return;}
+  el.innerHTML=items.map(d=>{const total=(d.lineItems||[]).reduce((s,li)=>s+li.qty*li.price,0)+d.zoneFee;return`<div class="delivery-card"><div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px"><div><div class="delivery-name">${d.contactName}</div><div class="delivery-meta">${d.jobAddress}</div><div class="delivery-meta">${d.time} - ${(d.lineItems||[]).map(li=>li.desc).join(', ')}</div></div><div style="text-align:right"><div style="font-weight:700">$${total.toFixed(0)}</div><div class="muted" style="font-size:11px">+GST</div></div></div><div class="delivery-badges"><span class="badge ${truckBadge(d.truck)}">${d.truck}</span>${d.deliveryType==='delivered'?`<span class="zone-pill">${d.zone}</span>`:'<span class="badge badge-exyard">Ex Yard</span>'}<span class="badge ${d.invoiced?'badge-invoiced':d.done?'badge-done':'badge-pending'}">${d.invoiced?'Invoiced':d.done?'Done':'Pending'}</span></div><div class="delivery-actions"><button class="btn btn-sm" onclick="toggleDone(${d.id})">${d.done?'<i class="ti ti-rotate-clockwise"></i> Undo':'<i class="ti ti-check"></i> Done'}</button>${d.deliveryType==='delivered'?`<a href="https://maps.google.com/maps?q=${encodeURIComponent(d.jobAddress)}" target="_blank" class="btn btn-sm"><i class="ti ti-map-pin"></i> Map</a>`:''}<button class="btn btn-sm btn-danger" onclick="deleteDelivery(${d.id})"><i class="ti ti-trash"></i></button></div></div>`;}).join('');
 }
 function toggleDone(id){const d=deliveries.find(x=>x.id===id);if(d){d.done=!d.done;save();renderDeliveries();renderInvoiceList();renderDriverList();}}
 function deleteDelivery(id){if(!confirm('Delete?'))return;deliveries=deliveries.filter(x=>x.id!==id);save();renderDeliveries();renderInvoiceList();}
 
 function renderInvoiceList(){
-  const pending=deliveries.filter(d=>!d.invoiced);
-  const el=document.getElementById('invoice-list');
+  const pending=deliveries.filter(d=>!d.invoiced);const el=document.getElementById('invoice-list');
   if(!pending.length){el.innerHTML='<div class="empty"><i class="ti ti-file-check"></i>All deliveries invoiced</div>';document.getElementById('invoice-summary').style.display='none';return;}
   el.innerHTML=pending.map(d=>{const total=(d.lineItems||[]).reduce((s,li)=>s+li.qty*li.price,0)+d.zoneFee;const sel=selectedForInvoice.has(d.id);return`<div class="delivery-card ${sel?'selected':''}" onclick="toggleInvoiceSelect(${d.id})"><div style="display:flex;align-items:center;gap:10px"><div style="width:22px;height:22px;border-radius:50%;border:2px solid ${sel?'#2d7a3a':'#ddd'};background:${sel?'#2d7a3a':'#fff'};display:flex;align-items:center;justify-content:center;flex-shrink:0">${sel?'<i class="ti ti-check" style="font-size:12px;color:#fff"></i>':''}</div><div style="flex:1"><div class="delivery-name">${d.contactName}</div><div class="delivery-meta">${d.jobAddress}</div><div class="delivery-badges" style="margin-top:6px"><span class="badge ${truckBadge(d.truck)}">${d.truck}</span>${d.deliveryType==='delivered'?`<span class="zone-pill">${d.zone} $${d.zoneFee}</span>`:'<span class="badge badge-exyard">Ex Yard</span>'}<span style="font-weight:700">$${total.toFixed(0)}+GST</span></div></div></div></div>`;}).join('');
   updateInvoiceSummary();
@@ -465,10 +411,8 @@ async function createInvoice(){
 function filterDriver(truck,el){driverFilter=truck;document.querySelectorAll('#tab-driver .tab').forEach(t=>t.classList.remove('active'));if(el)el.classList.add('active');renderDriverList();}
 function renderDriverList(){
   const items=deliveries.filter(d=>d.truck===driverFilter&&d.deliveryType==='delivered').sort((a,b)=>(a.time||'').localeCompare(b.time||''));
-  const done=items.filter(d=>d.done).length;
-  document.getElementById('drv-total').textContent=items.length;document.getElementById('drv-done').textContent=done;document.getElementById('drv-left').textContent=items.length-done;
-  const el=document.getElementById('driver-list');
-  if(!items.length){el.innerHTML='<div class="empty"><i class="ti ti-mood-happy"></i>No deliveries for this truck</div>';return;}
+  const done=items.filter(d=>d.done).length;document.getElementById('drv-total').textContent=items.length;document.getElementById('drv-done').textContent=done;document.getElementById('drv-left').textContent=items.length-done;
+  const el=document.getElementById('driver-list');if(!items.length){el.innerHTML='<div class="empty"><i class="ti ti-mood-happy"></i>No deliveries for this truck</div>';return;}
   el.innerHTML=items.map(d=>`<div class="delivery-card"><div style="display:flex;gap:10px;align-items:flex-start"><div style="width:26px;height:26px;border-radius:50%;border:2px solid ${d.done?'#2d7a3a':'#ddd'};background:${d.done?'#2d7a3a':'#fff'};display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;margin-top:2px" onclick="toggleDone(${d.id})">${d.done?'<i class="ti ti-check" style="font-size:13px;color:#fff"></i>':''}</div><div style="flex:1"><div class="delivery-name ${d.done?'muted':''}" style="${d.done?'text-decoration:line-through':''}">${d.contactName}</div><div class="delivery-meta">${d.time} - ${d.jobAddress}</div>${d.contactPhone?`<div class="delivery-meta"><i class="ti ti-phone" style="font-size:12px"></i> ${d.contactPhone}</div>`:''}<div class="delivery-badges" style="margin-top:6px"><span class="zone-pill">${d.zone}</span></div><div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px"><a href="https://maps.google.com/maps?q=${encodeURIComponent(d.jobAddress)}" target="_blank" class="btn btn-sm"><i class="ti ti-map-pin"></i> Navigate</a>${d.contactPhone?`<a href="tel:${d.contactPhone}" class="btn btn-sm"><i class="ti ti-phone"></i> Call</a>`:''}</div></div></div></div>`).join('');
 }
 
