@@ -14,11 +14,29 @@ const XERO_CLIENT_ID = process.env.XERO_CLIENT_ID;
 const XERO_CLIENT_SECRET = process.env.XERO_CLIENT_SECRET;
 const XERO_REDIRECT_URI = process.env.XERO_REDIRECT_URI;
 const XERO_SCOPES = 'offline_access accounting.contacts accounting.contacts.read accounting.invoices accounting.invoices.read accounting.settings.read';
+const DRIVER_PIN = process.env.DRIVER_PIN || '2026';
 
 async function getDb() {
   const client = new Client({ connectionString: process.env.DATABASE_URL });
   await client.connect();
-  await client.query(`CREATE TABLE IF NOT EXISTS xero_tokens (id INTEGER PRIMARY KEY DEFAULT 1, access_token TEXT, refresh_token TEXT, tenant_id TEXT, updated_at TIMESTAMP DEFAULT NOW())`);
+  // Create tables if they don't exist
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS xero_tokens (
+      id INTEGER PRIMARY KEY DEFAULT 1,
+      access_token TEXT,
+      refresh_token TEXT,
+      tenant_id TEXT,
+      updated_at TIMESTAMP DEFAULT NOW()
+    )
+  `);
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS deliveries (
+      id SERIAL PRIMARY KEY,
+      data JSONB NOT NULL,
+      created_at TIMESTAMP DEFAULT NOW(),
+      updated_at TIMESTAMP DEFAULT NOW()
+    )
+  `);
   return client;
 }
 
@@ -49,11 +67,7 @@ async function getValidToken() {
     params.append('refresh_token', tokens.refresh_token);
     params.append('client_id', XERO_CLIENT_ID);
     params.append('client_secret', XERO_CLIENT_SECRET);
-    const refreshRes = await axios.post(
-      'https://identity.xero.com/connect/token',
-      params.toString(),
-      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
-    );
+    const refreshRes = await axios.post('https://identity.xero.com/connect/token', params.toString(), { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } });
     await saveTokens(refreshRes.data.access_token, refreshRes.data.refresh_token, tokens.tenant_id);
     return { access_token: refreshRes.data.access_token, tenant_id: tokens.tenant_id };
   } catch (e) {
@@ -62,6 +76,7 @@ async function getValidToken() {
   }
 }
 
+// ===== AUTH =====
 app.get('/auth/xero', (req, res) => {
   const url = `https://login.xero.com/identity/connect/authorize?response_type=code&client_id=${XERO_CLIENT_ID}&redirect_uri=${encodeURIComponent(XERO_REDIRECT_URI)}&scope=${encodeURIComponent(XERO_SCOPES)}&state=mainscape`;
   res.redirect(url);
@@ -77,16 +92,9 @@ app.get('/callback', async (req, res) => {
     params.append('redirect_uri', XERO_REDIRECT_URI);
     params.append('client_id', XERO_CLIENT_ID);
     params.append('client_secret', XERO_CLIENT_SECRET);
-    const tokenRes = await axios.post(
-      'https://identity.xero.com/connect/token',
-      params.toString(),
-      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
-    );
-    const tenantsRes = await axios.get('https://api.xero.com/connections', {
-      headers: { Authorization: `Bearer ${tokenRes.data.access_token}` }
-    });
-    const tenantId = tenantsRes.data[0]?.tenantId;
-    await saveTokens(tokenRes.data.access_token, tokenRes.data.refresh_token, tenantId);
+    const tokenRes = await axios.post('https://identity.xero.com/connect/token', params.toString(), { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } });
+    const tenantsRes = await axios.get('https://api.xero.com/connections', { headers: { Authorization: `Bearer ${tokenRes.data.access_token}` } });
+    await saveTokens(tokenRes.data.access_token, tokenRes.data.refresh_token, tenantsRes.data[0]?.tenantId);
     res.redirect('/?connected=true');
   } catch (err) {
     console.error('Auth error:', err.response?.data || err.message);
@@ -100,26 +108,78 @@ app.get('/auth/status', async (req, res) => {
 });
 
 app.get('/auth/logout', async (req, res) => {
-  try {
-    const db = await getDb();
-    await db.query('DELETE FROM xero_tokens WHERE id=1');
-    await db.end();
-  } catch (e) {}
+  try { const db = await getDb(); await db.query('DELETE FROM xero_tokens WHERE id=1'); await db.end(); } catch (e) {}
   res.json({ ok: true });
 });
 
+// ===== DRIVER PIN LOGIN =====
+app.post('/auth/driver', (req, res) => {
+  const { pin, name } = req.body;
+  if (!name || !name.trim()) return res.status(400).json({ error: 'Please enter your name' });
+  if (pin !== DRIVER_PIN) return res.status(401).json({ error: 'Incorrect PIN' });
+  res.json({ ok: true, name: name.trim() });
+});
+
+// ===== DELIVERIES API =====
+app.get('/api/deliveries', async (req, res) => {
+  try {
+    const db = await getDb();
+    const result = await db.query('SELECT data FROM deliveries ORDER BY (data->>\'createdAt\') ASC');
+    await db.end();
+    res.json({ deliveries: result.rows.map(r => r.data) });
+  } catch (e) {
+    console.error('Get deliveries error:', e.message);
+    res.status(500).json({ error: 'Failed to get deliveries' });
+  }
+});
+
+app.post('/api/deliveries', async (req, res) => {
+  try {
+    const db = await getDb();
+    const delivery = req.body;
+    delivery.createdAt = delivery.createdAt || new Date().toISOString();
+    const result = await db.query('INSERT INTO deliveries (data) VALUES ($1) RETURNING id', [JSON.stringify(delivery)]);
+    delivery.dbId = result.rows[0].id;
+    await db.query('UPDATE deliveries SET data = $1 WHERE id = $2', [JSON.stringify(delivery), delivery.dbId]);
+    await db.end();
+    res.json({ delivery });
+  } catch (e) {
+    console.error('Save delivery error:', e.message);
+    res.status(500).json({ error: 'Failed to save delivery' });
+  }
+});
+
+app.put('/api/deliveries/:dbId', async (req, res) => {
+  try {
+    const db = await getDb();
+    const delivery = req.body;
+    await db.query('UPDATE deliveries SET data = $1, updated_at = NOW() WHERE id = $2', [JSON.stringify(delivery), req.params.dbId]);
+    await db.end();
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('Update delivery error:', e.message);
+    res.status(500).json({ error: 'Failed to update delivery' });
+  }
+});
+
+app.delete('/api/deliveries/:dbId', async (req, res) => {
+  try {
+    const db = await getDb();
+    await db.query('DELETE FROM deliveries WHERE id = $1', [req.params.dbId]);
+    await db.end();
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('Delete delivery error:', e.message);
+    res.status(500).json({ error: 'Failed to delete delivery' });
+  }
+});
+
+// ===== PRODUCTS =====
 app.get('/api/products', async (req, res) => {
   try {
     const { access_token, tenant_id } = await getValidToken();
-    const response = await axios.get('https://api.xero.com/api.xro/2.0/Items', {
-      headers: { Authorization: `Bearer ${access_token}`, 'Xero-tenant-id': tenant_id, Accept: 'application/json' }
-    });
-    const products = (response.data.Items || []).map(item => ({
-      sku: item.Code,
-      name: item.Name,
-      price: item.SalesDetails?.UnitPrice || 0,
-      description: item.Description || item.Name
-    })).filter(p => p.price > 0);
+    const response = await axios.get('https://api.xero.com/api.xro/2.0/Items', { headers: { Authorization: `Bearer ${access_token}`, 'Xero-tenant-id': tenant_id, Accept: 'application/json' } });
+    const products = (response.data.Items || []).map(item => ({ sku: item.Code, name: item.Name, price: item.SalesDetails?.UnitPrice || 0, description: item.Description || item.Name })).filter(p => p.price > 0);
     res.json({ products });
   } catch (err) {
     console.error('Products error:', err.response?.data || err.message);
@@ -127,21 +187,15 @@ app.get('/api/products', async (req, res) => {
   }
 });
 
+// ===== CONTACTS =====
 app.get('/api/contacts/search', async (req, res) => {
   try {
     const { access_token, tenant_id } = await getValidToken();
     const { q } = req.query;
-    const response = await axios.get(`https://api.xero.com/api.xro/2.0/Contacts?searchTerm=${encodeURIComponent(q)}&includeArchived=false`, {
-      headers: { Authorization: `Bearer ${access_token}`, 'Xero-tenant-id': tenant_id, Accept: 'application/json' }
-    });
-    const contacts = (response.data.Contacts || []).slice(0, 10).map(c => ({
-      id: c.ContactID, name: c.Name,
-      phone: c.Phones?.find(p => p.PhoneType === 'MOBILE')?.PhoneNumber || c.Phones?.[0]?.PhoneNumber || '',
-      email: c.EmailAddress || '',
-    }));
+    const response = await axios.get(`https://api.xero.com/api.xro/2.0/Contacts?searchTerm=${encodeURIComponent(q)}&includeArchived=false`, { headers: { Authorization: `Bearer ${access_token}`, 'Xero-tenant-id': tenant_id, Accept: 'application/json' } });
+    const contacts = (response.data.Contacts || []).slice(0, 10).map(c => ({ id: c.ContactID, name: c.Name, phone: c.Phones?.find(p => p.PhoneType === 'MOBILE')?.PhoneNumber || c.Phones?.[0]?.PhoneNumber || '', email: c.EmailAddress || '' }));
     res.json({ contacts });
   } catch (err) {
-    console.error('Contact search error:', err.response?.data || err.message);
     res.status(500).json({ error: 'Failed to search contacts' });
   }
 });
@@ -150,18 +204,15 @@ app.post('/api/contacts', async (req, res) => {
   try {
     const { access_token, tenant_id } = await getValidToken();
     const { name, phone, email } = req.body;
-    const response = await axios.post('https://api.xero.com/api.xro/2.0/Contacts',
-      { Contacts: [{ Name: name, EmailAddress: email || '', Phones: phone ? [{ PhoneType: 'MOBILE', PhoneNumber: phone }] : [] }] },
-      { headers: { Authorization: `Bearer ${access_token}`, 'Xero-tenant-id': tenant_id, 'Content-Type': 'application/json', Accept: 'application/json' } }
-    );
+    const response = await axios.post('https://api.xero.com/api.xro/2.0/Contacts', { Contacts: [{ Name: name, EmailAddress: email || '', Phones: phone ? [{ PhoneType: 'MOBILE', PhoneNumber: phone }] : [] }] }, { headers: { Authorization: `Bearer ${access_token}`, 'Xero-tenant-id': tenant_id, 'Content-Type': 'application/json', Accept: 'application/json' } });
     const c = response.data.Contacts?.[0];
     res.json({ id: c.ContactID, name: c.Name, phone, email });
   } catch (err) {
-    console.error('Create contact error:', err.response?.data || err.message);
     res.status(500).json({ error: 'Failed to create contact' });
   }
 });
 
+// ===== INVOICES =====
 app.post('/api/invoices', async (req, res) => {
   try {
     const { access_token, tenant_id } = await getValidToken();
@@ -177,48 +228,27 @@ app.post('/api/invoices', async (req, res) => {
         lineItems.push({ Description: d.zoneProductDesc || `Delivery - ${d.zone} (${d.truck})`, Quantity: 1, UnitAmount: d.zoneFee });
       }
     }
-    const invoiceData = {
-      Invoices: [{
-        Type: 'ACCREC',
-        Status: 'DRAFT',
-        Contact: contactId ? { ContactID: contactId } : { Name: contactName },
-        Reference: jobAddress,
-        LineItems: lineItems
-      }]
-    };
     const response = await axios.post('https://api.xero.com/api.xro/2.0/Invoices',
-      invoiceData,
+      { Invoices: [{ Type: 'ACCREC', Status: 'DRAFT', Contact: contactId ? { ContactID: contactId } : { Name: contactName }, Reference: jobAddress, LineItems: lineItems }] },
       { headers: { Authorization: `Bearer ${access_token}`, 'Xero-tenant-id': tenant_id, 'Content-Type': 'application/json', Accept: 'application/json' } }
     );
     const inv = response.data.Invoices?.[0];
-    if (inv?.HasErrors) {
-      return res.status(500).json({ error: inv.ValidationErrors?.[0]?.Message || 'Validation error' });
-    }
+    if (inv?.HasErrors) return res.status(500).json({ error: inv.ValidationErrors?.[0]?.Message || 'Validation error' });
     res.json({ invoiceId: inv.InvoiceID, invoiceNumber: inv.InvoiceNumber });
   } catch (err) {
     console.error('Invoice error:', err.response?.data || err.message);
-    res.status(500).json({ error: JSON.stringify(err.response?.data) || err.message || 'Failed to create invoice' });
+    res.status(500).json({ error: JSON.stringify(err.response?.data) || err.message });
   }
 });
 
-// Check payment status of an invoice in Xero
 app.get('/api/invoice-status/:invoiceId', async (req, res) => {
   try {
     const { access_token, tenant_id } = await getValidToken();
-    const response = await axios.get(`https://api.xero.com/api.xro/2.0/Invoices/${req.params.invoiceId}`, {
-      headers: { Authorization: `Bearer ${access_token}`, 'Xero-tenant-id': tenant_id, Accept: 'application/json' }
-    });
+    const response = await axios.get(`https://api.xero.com/api.xro/2.0/Invoices/${req.params.invoiceId}`, { headers: { Authorization: `Bearer ${access_token}`, 'Xero-tenant-id': tenant_id, Accept: 'application/json' } });
     const inv = response.data.Invoices?.[0];
     if (!inv) return res.status(404).json({ error: 'Invoice not found' });
-    res.json({
-      status: inv.Status,
-      paid: inv.Status === 'PAID',
-      amountDue: inv.AmountDue,
-      amountPaid: inv.AmountPaid,
-      total: inv.Total
-    });
+    res.json({ status: inv.Status, paid: inv.Status === 'PAID', amountDue: inv.AmountDue, amountPaid: inv.AmountPaid, total: inv.Total });
   } catch (err) {
-    console.error('Invoice status error:', err.response?.data || err.message);
     res.status(500).json({ error: 'Failed to check invoice status' });
   }
 });
@@ -229,5 +259,4 @@ app.get('*', (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Mainscape Delivery running on port ${PORT}`));
-
 module.exports = app;
