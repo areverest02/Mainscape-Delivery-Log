@@ -10,8 +10,8 @@ app.use(express.json());
 app.use(cors({ origin: true, credentials: true }));
 app.use(session({
   secret: process.env.SESSION_SECRET || 'mainscape2024',
-  resave: false,
-  saveUninitialized: false,
+  resave: true,
+  saveUninitialized: true,
   cookie: { secure: false, maxAge: 24 * 60 * 60 * 1000 }
 }));
 app.use(express.static(path.join(__dirname, '../public')));
@@ -20,29 +20,45 @@ const XERO_CLIENT_ID = process.env.XERO_CLIENT_ID;
 const XERO_CLIENT_SECRET = process.env.XERO_CLIENT_SECRET;
 const XERO_REDIRECT_URI = process.env.XERO_REDIRECT_URI;
 const XERO_SCOPES = 'app.connections accounting.contacts accounting.contacts.read accounting.invoices accounting.invoices.read';
+
 app.get('/auth/xero', (req, res) => {
   const url = `https://login.xero.com/identity/connect/authorize?response_type=code&client_id=${XERO_CLIENT_ID}&redirect_uri=${encodeURIComponent(XERO_REDIRECT_URI)}&scope=${encodeURIComponent(XERO_SCOPES)}&state=mainscape`;
   res.redirect(url);
 });
 
 app.get('/callback', async (req, res) => {
-  const { code } = req.query;
+  const { code, error } = req.query;
+  if (error || !code) {
+    console.error('Xero callback error:', error);
+    return res.redirect('/?error=auth_failed');
+  }
   try {
-    const tokenRes = await axios.post('https://identity.xero.com/connect/token',
-      new URLSearchParams({
-        grant_type: 'authorization_code',
-        code,
-        redirect_uri: XERO_REDIRECT_URI,
-        client_id: XERO_CLIENT_ID,
-        client_secret: XERO_CLIENT_SECRET,
-      }),
+    const params = new URLSearchParams();
+    params.append('grant_type', 'authorization_code');
+    params.append('code', code);
+    params.append('redirect_uri', XERO_REDIRECT_URI);
+    params.append('client_id', XERO_CLIENT_ID);
+    params.append('client_secret', XERO_CLIENT_SECRET);
+
+    const tokenRes = await axios.post(
+      'https://identity.xero.com/connect/token',
+      params.toString(),
       { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
     );
     req.session.tokens = tokenRes.data;
+
     const tenantsRes = await axios.get('https://api.xero.com/connections', {
       headers: { Authorization: `Bearer ${tokenRes.data.access_token}` }
     });
     req.session.tenantId = tenantsRes.data[0]?.tenantId;
+
+    await new Promise((resolve, reject) => {
+      req.session.save((err) => {
+        if (err) reject(err);
+        else resolve();
+      });
+    });
+
     res.redirect('/?connected=true');
   } catch (err) {
     console.error('Auth error:', err.response?.data || err.message);
@@ -63,13 +79,14 @@ async function getValidToken(req) {
   const tokens = req.session.tokens;
   if (!tokens) throw new Error('Not authenticated');
   try {
-    const refreshRes = await axios.post('https://identity.xero.com/connect/token',
-      new URLSearchParams({
-        grant_type: 'refresh_token',
-        refresh_token: tokens.refresh_token,
-        client_id: XERO_CLIENT_ID,
-        client_secret: XERO_CLIENT_SECRET,
-      }),
+    const params = new URLSearchParams();
+    params.append('grant_type', 'refresh_token');
+    params.append('refresh_token', tokens.refresh_token);
+    params.append('client_id', XERO_CLIENT_ID);
+    params.append('client_secret', XERO_CLIENT_SECRET);
+    const refreshRes = await axios.post(
+      'https://identity.xero.com/connect/token',
+      params.toString(),
       { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
     );
     req.session.tokens = refreshRes.data;
