@@ -502,9 +502,10 @@ async function loadProducts(){
 
 // ===== DAILY TOTAL =====
 function orderTotal(d){return(d.lineItems||[]).reduce((s,li)=>s+li.qty*(li.discount?li.price*(1-li.discount/100):li.price),0)+(d.zoneFee||0);}
+function localDateStr(){const n=new Date();return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0');}
 function updateDailyTotal(){
   if(userRole!=='admin')return;
-  const today=new Date().toISOString().split('T')[0];
+  const today=localDateStr();
   const todayOrders=deliveries.filter(d=>d.date===today);
   const total=todayOrders.reduce((s,d)=>s+orderTotal(d),0);
   const badge=document.getElementById('daily-total-badge');
@@ -877,7 +878,7 @@ function renderDriverList(){
   const el=document.getElementById('driver-list');
   if(!items.length){el.innerHTML='<div class="empty"><i class="ti ti-mood-happy"></i>No deliveries for this truck</div>';return;}
   const byDate={};items.forEach(d=>{const key=d.date||'unscheduled';if(!byDate[key])byDate[key]=[];byDate[key].push(d);});
-  const today=new Date().toISOString().split('T')[0];
+  const today=localDateStr();
   el.innerHTML=Object.keys(byDate).sort().map(date=>{
     const dayItems=byDate[date].sort((a,b)=>(a.time||'').localeCompare(b.time||''));
     const isToday=date===today;
@@ -893,7 +894,7 @@ function renderDriverOnly(){
   const el=document.getElementById('driver-only-list');
   if(!items.length){el.innerHTML='<div class="empty"><i class="ti ti-mood-happy"></i>No deliveries scheduled — check back soon!</div>';return;}
   const byDate={};items.forEach(d=>{const key=d.date||'unscheduled';if(!byDate[key])byDate[key]=[];byDate[key].push(d);});
-  const today=new Date().toISOString().split('T')[0];
+  const today=localDateStr();
   el.innerHTML=Object.keys(byDate).sort().map(date=>{
     const dayItems=byDate[date].sort((a,b)=>(a.time||'').localeCompare(b.time||''));
     const isToday=date===today;
@@ -937,15 +938,15 @@ function exportCSV(){
   const blob=new Blob([csv],{type:'text/csv'});
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');
-  a.href=url;a.download='mainscape-deliveries-'+new Date().toISOString().split('T')[0]+'.csv';
+  a.href=url;a.download='mainscape-deliveries-'+localDateStr()+'.csv';
   a.click();URL.revokeObjectURL(url);
 }
 
 function showMsg(el,type,text){el.className='alert alert-'+(type==='ok'?'ok':'err');el.textContent=text;el.style.display='block';if(type==='ok')setTimeout(()=>el.style.display='none',4000);}
 // Refresh at midnight so daily total resets for new day
-let _lastDate=new Date().toISOString().split('T')[0];
+let _lastDate=localDateStr();
 setInterval(()=>{
-  const today=new Date().toISOString().split('T')[0];
+  const today=localDateStr();
   if(today!==_lastDate){_lastDate=today;if(userRole==='admin')loadDeliveries();}
 },60000);
 
@@ -953,3 +954,4 @@ window.addEventListener('DOMContentLoaded',checkAuth);
 </script>
 </body>
 </html>
+
