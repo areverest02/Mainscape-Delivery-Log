@@ -11,10 +11,11 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 .app { max-width: 480px; margin: 0 auto; min-height: 100vh; background: #fff; }
 .screen { display: none; }
 .screen.active { display: block; }
-.header { background: #fff; border-bottom: 1px solid #e8e8e2; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 10; }
-.header img { height: 36px; }
+.header { background: #fff; border-bottom: 1px solid #e8e8e2; padding: 10px 16px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 10; }
+.header img { height: 32px; }
 .header-right { display: flex; align-items: center; gap: 8px; }
 .driver-name-badge { background: #f0fdf4; color: #166534; font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 100px; border: 1px solid #86efac; }
+.daily-total-badge { background: #1a1a1a; color: #fff; font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 100px; }
 .nav { display: flex; background: #fff; border-bottom: 1px solid #e8e8e2; overflow-x: auto; }
 .nav-btn { flex: 1; min-width: 0; padding: 10px 2px; font-size: 11px; border: none; background: none; cursor: pointer; color: #888; display: flex; flex-direction: column; align-items: center; gap: 3px; white-space: nowrap; }
 .nav-btn.active { color: #2d7a3a; border-bottom: 2px solid #2d7a3a; }
@@ -29,6 +30,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 .btn-danger { color: #c0392b; border-color: #c0392b; }
 .btn-danger:hover { background: #fdf0f0; }
 .btn-xero { background: #1ab4d7; color: #fff; border-color: #1ab4d7; }
+.btn-warning { background: #f59e0b; color: #fff; border-color: #f59e0b; }
 .btn-full { width: 100%; justify-content: center; }
 .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .form-group { margin-bottom: 12px; }
@@ -85,6 +87,7 @@ input:focus, select:focus { outline: none; border-color: #2d7a3a; }
 .toggle-opt { flex: 1; text-align: center; padding: 8px; font-size: 14px; cursor: pointer; border-radius: 6px; border: none; background: none; color: #888; font-weight: 500; font-family: inherit; transition: all 0.15s; }
 .toggle-opt.active { background: #2d7a3a; color: #fff; }
 .toggle-opt.active-amber { background: #f59e0b; color: #fff; }
+.toggle-opt.active-blue { background: #2563eb; color: #fff; }
 .product-row { display: flex; gap: 6px; align-items: flex-start; margin-bottom: 8px; padding: 10px; background: #f9f9f7; border-radius: 8px; flex-wrap: wrap; }
 .weight-bar { height: 6px; background: #e8e8e2; border-radius: 3px; margin: 6px 0; overflow: hidden; }
 .weight-fill { height: 100%; border-radius: 3px; background: #2d7a3a; transition: width 0.3s; }
@@ -108,6 +111,17 @@ input:focus, select:focus { outline: none; border-color: #2d7a3a; }
 .payment-paid { background: #dcfce7; color: #166534; }
 .payment-unpaid { background: #fee2e2; color: #991b1b; }
 .done-by { font-size: 11px; color: #888; margin-top: 4px; font-style: italic; }
+/* Customer group in invoice */
+.customer-group { border: 1px solid #e8e8e2; border-radius: 12px; margin-bottom: 10px; overflow: hidden; }
+.customer-group-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; background: #f9f9f7; cursor: pointer; user-select: none; }
+.customer-group-header h3 { font-size: 14px; font-weight: 700; }
+.customer-group-body { padding: 8px; display: none; }
+.customer-group-body.open { display: block; }
+/* Edit modal */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; display: flex; align-items: flex-end; justify-content: center; }
+.modal { background: #fff; border-radius: 16px 16px 0 0; width: 100%; max-width: 480px; max-height: 90vh; overflow-y: auto; padding: 20px 16px 40px; }
+.modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.modal-header h2 { font-size: 18px; font-weight: 700; }
 </style>
 </head>
 <body>
@@ -145,6 +159,7 @@ input:focus, select:focus { outline: none; border-color: #2d7a3a; }
     <div class="header">
       <img src="https://mainscapegardensupplies.co.nz/wp-content/uploads/2020/04/cropped-mainscape-garden-logo-1-300x66.png" alt="Mainscape">
       <div class="header-right">
+        <span id="daily-total-badge" class="daily-total-badge" style="display:none"></span>
         <span class="driver-name-badge" id="user-badge" style="display:none"></span>
         <button class="btn btn-sm" onclick="logout()"><i class="ti ti-logout"></i></button>
       </div>
@@ -160,7 +175,7 @@ input:focus, select:focus { outline: none; border-color: #2d7a3a; }
       <button class="nav-btn" id="nav-archive" onclick="showTab('archive')"><i class="ti ti-archive"></i><span>Archive</span></button>
     </div>
 
-    <!-- DRIVER NAV (simplified) -->
+    <!-- DRIVER NAV -->
     <div class="nav" id="driver-nav" style="display:none">
       <button class="nav-btn active" id="dnav-driver" onclick="showDriverTab('driver')"><i class="ti ti-steering-wheel"></i><span>My Deliveries</span></button>
     </div>
@@ -190,6 +205,14 @@ input:focus, select:focus { outline: none; border-color: #2d7a3a; }
           </div>
         </div>
         <button class="btn btn-sm" onclick="toggleNewContact()" id="new-contact-toggle"><i class="ti ti-user-plus"></i> Add new customer</button>
+        <hr class="divider" style="margin-top:12px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:4px">
+          <div><div style="font-size:13px;font-weight:600;color:#1a1a1a">Account type</div><div style="font-size:12px;color:#888">Sets Xero account code</div></div>
+          <div class="toggle-group" style="margin:0;width:180px">
+            <button class="toggle-opt active" id="toggle-trade" onclick="setAccountType('trade')">Trade</button>
+            <button class="toggle-opt" id="toggle-retail" onclick="setAccountType('retail')">Retail</button>
+          </div>
+        </div>
       </div>
       <div class="section-hdr">Products</div>
       <div class="card">
@@ -259,7 +282,7 @@ input:focus, select:focus { outline: none; border-color: #2d7a3a; }
       <button class="btn btn-primary btn-full" onclick="confirmOrder()" id="confirm-btn"><i class="ti ti-check"></i> Add to deliveries</button>
     </div>
 
-    <!-- DELIVERIES (delivered only) -->
+    <!-- DELIVERIES -->
     <div id="tab-deliveries" class="content" style="display:none">
       <div class="stats-row">
         <div class="stat"><div class="stat-num" id="d-total">0</div><div class="stat-label">Total</div></div>
@@ -288,7 +311,7 @@ input:focus, select:focus { outline: none; border-color: #2d7a3a; }
     <!-- INVOICE -->
     <div id="tab-invoice" class="content" style="display:none">
       <div class="section-hdr">Select orders to invoice</div>
-      <p class="muted" style="margin-bottom:12px;font-size:13px">Tap to select, then create one Xero draft invoice. EFTPOS excluded. Orders stay here until invoiced.</p>
+      <p class="muted" style="margin-bottom:12px;font-size:13px">Grouped by customer. Tap loads to select. EFTPOS excluded. Orders stay here until invoiced.</p>
       <div id="invoice-list"></div>
       <div id="invoice-summary" style="display:none">
         <div class="card" style="background:#f0fdf4;border-color:#86efac">
@@ -300,7 +323,7 @@ input:focus, select:focus { outline: none; border-color: #2d7a3a; }
       </div>
     </div>
 
-    <!-- DRIVER TAB (admin view) -->
+    <!-- DRIVER TAB (admin) -->
     <div id="tab-driver" class="content" style="display:none">
       <div class="tabs">
         <button class="tab active" onclick="filterDriver('Hino 300',this)">Hino 300</button>
@@ -312,6 +335,9 @@ input:focus, select:focus { outline: none; border-color: #2d7a3a; }
 
     <!-- ARCHIVE -->
     <div id="tab-archive" class="content" style="display:none">
+      <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
+        <button class="btn btn-sm" onclick="exportCSV()"><i class="ti ti-download"></i> Export CSV</button>
+      </div>
       <div class="section-hdr">Completed orders by week</div>
       <div id="archive-list"></div>
     </div>
@@ -329,6 +355,17 @@ input:focus, select:focus { outline: none; border-color: #2d7a3a; }
   </div>
 </div>
 
+<!-- EDIT MODAL -->
+<div id="edit-modal" class="modal-overlay" style="display:none" onclick="closeEditModal(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <h2><i class="ti ti-pencil"></i> Edit Order</h2>
+      <button class="btn btn-sm" onclick="closeEditModal()"><i class="ti ti-x"></i></button>
+    </div>
+    <div id="edit-modal-body"></div>
+  </div>
+</div>
+
 <script>
 const ZONES=[{name:'Zone 1',areas:['lincoln','springston','greenpark','ladbrooks','prebbleton'],mini:55,big:75},{name:'Zone 2',areas:['rolleston','hornby','taitapu','wigram','halswell','motukara','templeton','islington','sockburn'],mini:74,big:100},{name:'Zone 3',areas:['west melton','kirwee','leeston','avonhead','yaldhurst','ilam','hoon hay','riccarton','upper riccarton','addington','spreydon','hillmorton','beckenham','st martins','church corner','russley'],mini:103,big:143},{name:'Zone 4',areas:['cashmere','woolston','harewood','bishopdale','casebrook','papanui','merivale','st albans','sydenham','edgeware','shirley','belfast','redwood','northwood','burnside','bryndwr','fendalton','strowan','central city','city centre'],mini:120,big:175},{name:'Zone 5',areas:['marshland','parklands','burwood','new brighton','bromley','aranui','wainoni','dallington','bexley','waltham','linwood','richmond','phillipstown'],mini:150,big:205}];
 const SOIL_ZONES=[{name:'Zone 1',areas:['lincoln','springston','greenpark','ladbrooks','prebbleton'],mini:73.91,big:100},{name:'Zone 2',areas:['rolleston','hornby','taitapu','wigram','halswell','motukara','templeton','islington','sockburn'],mini:103,big:143},{name:'Zone 3',areas:['west melton','kirwee','leeston','avonhead','yaldhurst','ilam','hoon hay','riccarton','upper riccarton','addington','spreydon','hillmorton','beckenham','st martins','church corner','russley'],mini:120,big:175},{name:'Zone 4',areas:['cashmere','woolston','harewood','bishopdale','casebrook','papanui','merivale','st albans','sydenham','edgeware','shirley','belfast','redwood','northwood','burnside','bryndwr','fendalton','strowan','central city','city centre'],mini:150,big:205},{name:'Zone 5',areas:['marshland','parklands','burwood','new brighton','bromley','aranui','wainoni','dallington','bexley','waltham','linwood','richmond','phillipstown'],mini:185,big:240}];
@@ -336,17 +373,23 @@ const TRUCKS=[{name:'Hino 300',maxT:6},{name:'Hino 700',maxT:12},{name:'Hino 700
 const DAYS=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 const SCOOP_TO_M3=1/3;
 const CONV_RATES={'chip':1.5,'schist':1.5,'pebble':1.6,'ap20':1.65,'ap40':1.75,'crusher':1.5,'premix':1.7,'rounds':1.6,'tailings':1.6,'sand':1.55,'soil':1.2,'compost':1.2,'vege':1.2,'garden':1.2,'topdress':1.2,'living earth':1.2};
+// Products that are priced per m3 (cubic rate) — everything else defaults to scoop
+const M3_KEYWORDS=['soil','bulk'];
+// This product auto-disables delivery fee
+const SCREENED_SOIL_DELIVERED='Screened Soil Delivered';
+
 function getConvRate(n){const nl=n.toLowerCase();for(const [k,v] of Object.entries(CONV_RATES)){if(nl.includes(k))return v;}return null;}
 function isSoilProduct(name){return name.toLowerCase().includes('soil');}
+function isM3Product(name){return M3_KEYWORDS.some(k=>name.toLowerCase().includes(k));}
+function isScreenedSoilDelivered(name){return name.toLowerCase().includes('screened soil delivered');}
 
 let PRODUCTS=[];
 let deliveries=[];
-let currentContact=null,deliveryType='delivered',paymentType='invoice',tradeDiscount=false;
+let currentContact=null,deliveryType='delivered',paymentType='invoice',tradeDiscount=false,accountType='trade';
 let driverFilter='Hino 300',deliveryFilter='all',selectedForInvoice=new Set();
 let productRows=[{sku:'',qty:1,unit:'m3',customPrice:null,searchText:''}];
-let userRole=null;
-let driverName=null;
-let includeZoneFee=true;
+let userRole=null,driverName=null,includeZoneFee=true;
+let editingDbId=null;
 
 // ===== AUTH =====
 async function checkAuth(){
@@ -358,7 +401,6 @@ async function checkAuth(){
   try{const r=await fetch('/auth/status',{credentials:'include'});const d=await r.json();if(d.connected){enterAdmin();return;}}catch{}
   document.getElementById('screen-login').classList.add('active');
 }
-
 function showLoginMsg(type,text){const el=document.getElementById('login-msg');el.className='alert alert-'+(type==='err'?'err':'ok');el.textContent=text;el.style.display='block';}
 function connectXero(){window.location.href='/auth/xero';}
 
@@ -373,8 +415,7 @@ async function driverLogin(){
     const r=await fetch('/auth/driver',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,pin})});
     const d=await r.json();
     if(d.error){showLoginMsg('err',d.error);btn.disabled=false;btn.innerHTML='<i class="ti ti-steering-wheel"></i> Driver Login';return;}
-    driverName=d.name;
-    enterDriver();
+    driverName=d.name;enterDriver();
   }catch(e){showLoginMsg('err','Login failed. Try again.');btn.disabled=false;btn.innerHTML='<i class="ti ti-steering-wheel"></i> Driver Login';}
 }
 
@@ -421,36 +462,59 @@ async function loadDeliveries(driverOnly=false){
     const d=await r.json();
     deliveries=d.deliveries||[];
     if(driverOnly){renderDriverOnly();}
-    else{renderDeliveries();renderExYard();renderInvoiceList();renderDriverList();renderArchive();updateStats();}
+    else{renderDeliveries();renderExYard();renderInvoiceList();renderDriverList();renderArchive();updateStats();updateDailyTotal();}
   }catch(e){console.error('Load deliveries error:',e);}
 }
 
 function showTab(tab){
   const allTabs=['orders','deliveries','exyard','invoice','driver','archive'];
-  allTabs.forEach(t=>{
-    document.getElementById('tab-'+t).style.display=t===tab?'block':'none';
-    document.getElementById('nav-'+t).classList.toggle('active',t===tab);
-  });
+  allTabs.forEach(t=>{document.getElementById('tab-'+t).style.display=t===tab?'block':'none';document.getElementById('nav-'+t).classList.toggle('active',t===tab);});
   if(['deliveries','exyard','invoice','driver','archive'].includes(tab)){loadDeliveries();}
 }
-
-function showDriverTab(tab){
+function showDriverTab(){
   document.getElementById('tab-driver-only').style.display='block';
   document.getElementById('dnav-driver').classList.add('active');
   loadDeliveries(true);
 }
 
-function setDefaultDate(){const now=new Date();const today=now.getFullYear()+"-"+String(now.getMonth()+1).padStart(2,"0")+"-"+String(now.getDate()).padStart(2,"0");const currentTime=String(now.getHours()).padStart(2,"0")+":"+String(now.getMinutes()).padStart(2,"0");document.getElementById("delivery-date").value=today;document.getElementById("exyard-date").value=today;document.getElementById("delivery-time").value=currentTime;document.getElementById("exyard-time").value=currentTime;}
+function setDefaultDate(){
+  const now=new Date();
+  const today=now.getFullYear()+"-"+String(now.getMonth()+1).padStart(2,"0")+"-"+String(now.getDate()).padStart(2,"0");
+  const currentTime=String(now.getHours()).padStart(2,"0")+":"+String(now.getMinutes()).padStart(2,"0");
+  document.getElementById("delivery-date").value=today;
+  document.getElementById("exyard-date").value=today;
+  document.getElementById("delivery-time").value=currentTime;
+  document.getElementById("exyard-time").value=currentTime;
+}
 
 async function loadProducts(){
-  try{const r=await fetch('/api/products',{credentials:'include'});const d=await r.json();if(d.products&&d.products.length){PRODUCTS=d.products;if(!productRows[0].sku&&PRODUCTS.length)productRows[0].sku=PRODUCTS[0].sku;}}catch(e){}
+  try{const r=await fetch('/api/products',{credentials:'include'});const d=await r.json();if(d.products&&d.products.length){PRODUCTS=d.products;}}catch(e){}
   document.getElementById('products-loading').style.display='none';
   document.getElementById('product-rows').style.display='block';
   document.getElementById('add-product-btn').style.display='inline-flex';
+  // Set first product row with smart default unit
+  if(PRODUCTS.length){
+    productRows[0].sku=PRODUCTS[0].sku;
+    productRows[0].unit=isM3Product(PRODUCTS[0].name)?'m3':'scoop';
+  }
   renderProductRows();
 }
 
+// ===== DAILY TOTAL =====
+function orderTotal(d){return(d.lineItems||[]).reduce((s,li)=>s+li.qty*(li.discount?li.price*(1-li.discount/100):li.price),0)+(d.zoneFee||0);}
+function updateDailyTotal(){
+  if(userRole!=='admin')return;
+  const today=new Date().toISOString().split('T')[0];
+  const todayOrders=deliveries.filter(d=>d.date===today);
+  const total=todayOrders.reduce((s,d)=>s+orderTotal(d),0);
+  const badge=document.getElementById('daily-total-badge');
+  if(todayOrders.length){badge.textContent='Today $'+total.toFixed(0);badge.style.display='inline-block';}
+  else{badge.style.display='none';}
+}
+
+// ===== FORM CONTROLS =====
 function setPaymentType(type){paymentType=type;document.getElementById('toggle-invoice').className='toggle-opt'+(type==='invoice'?' active':'');document.getElementById('toggle-eftpos').className='toggle-opt'+(type==='eftpos'?' active-amber':'');}
+function setAccountType(type){accountType=type;document.getElementById('toggle-trade').className='toggle-opt'+(type==='trade'?' active':'');document.getElementById('toggle-retail').className='toggle-opt'+(type==='retail'?' active-blue':'');}
 function setDeliveryType(type){deliveryType=type;document.getElementById('toggle-delivered').classList.toggle('active',type==='delivered');document.getElementById('toggle-exyard').classList.toggle('active',type==='exyard');document.getElementById('delivery-details').style.display=type==='delivered'?'block':'none';document.getElementById('exyard-details').style.display=type==='exyard'?'block':'none';document.getElementById('zone-fee-toggle-wrap').style.display=type==='delivered'?'flex':'none';}
 function toggleZoneFee(){
   includeZoneFee=!includeZoneFee;
@@ -460,6 +524,18 @@ function toggleZoneFee(){
   detectZoneFromInput();
 }
 function toggleDiscount(){tradeDiscount=!tradeDiscount;const btn=document.getElementById('discount-toggle');btn.textContent=tradeDiscount?'On — 10% off':'Off';btn.style.background=tradeDiscount?'#fef3c7':'#fff';renderProductRows();}
+
+// ===== PRODUCT ROWS =====
+function checkScreenedSoilDelivered(){
+  // If any selected product is "Screened Soil Delivered", auto-turn off zone fee
+  const hasIt=productRows.some(r=>{const p=PRODUCTS.find(x=>x.sku===r.sku);return p&&isScreenedSoilDelivered(p.name);});
+  if(hasIt&&includeZoneFee){
+    includeZoneFee=false;
+    const btn=document.getElementById('zone-fee-toggle');
+    if(btn){btn.textContent='Off';btn.style.background='#9ca3af';}
+    detectZoneFromInput();
+  }
+}
 
 function renderProductRows(){
   if(!PRODUCTS.length)return;
@@ -490,12 +566,25 @@ function renderProductRows(){
   }).join('');
   updateWeightSummary();
 }
+
 function filterProducts(i,val){productRows[i].searchText=val;const filtered=PRODUCTS.filter(p=>p.name.toLowerCase().includes(val.toLowerCase())||p.sku.toLowerCase().includes(val.toLowerCase())).slice(0,20);const drop=document.getElementById('pdrop-'+i);if(!filtered.length){drop.style.display='none';return;}drop.innerHTML=filtered.map(p=>`<div class="product-option" onclick="selectProduct(${i},'${p.sku}')"><div>${p.name}</div><div class="sku">$${p.price}</div></div>`).join('');drop.style.display='block';}
 function showProductDropdown(i){filterProducts(i,productRows[i].searchText||'');}
-function selectProduct(i,sku){const p=PRODUCTS.find(x=>x.sku===sku);productRows[i].sku=sku;productRows[i].searchText=p?p.name:'';productRows[i].customPrice=null;const drop=document.getElementById('pdrop-'+i);if(drop)drop.style.display='none';renderProductRows();detectZoneFromInput();}
+function selectProduct(i,sku){
+  const p=PRODUCTS.find(x=>x.sku===sku);
+  productRows[i].sku=sku;
+  productRows[i].searchText=p?p.name:'';
+  productRows[i].customPrice=null;
+  // Smart default unit
+  productRows[i].unit=p?(isM3Product(p.name)?'m3':'scoop'):'scoop';
+  const drop=document.getElementById('pdrop-'+i);
+  if(drop)drop.style.display='none';
+  renderProductRows();
+  detectZoneFromInput();
+  checkScreenedSoilDelivered();
+}
 document.addEventListener('click',e=>{if(!e.target.closest('.product-dropdown')&&!e.target.closest('input[onfocus]'))document.querySelectorAll('.product-dropdown').forEach(d=>d.style.display='none');});
-function addProductRow(){productRows.push({sku:PRODUCTS[0]?.sku||'',qty:1,unit:'m3',customPrice:null,searchText:''});renderProductRows();}
-function removeProductRow(i){productRows.splice(i,1);renderProductRows();}
+function addProductRow(){productRows.push({sku:'',qty:1,unit:'scoop',customPrice:null,searchText:''});renderProductRows();}
+function removeProductRow(i){productRows.splice(i,1);renderProductRows();checkScreenedSoilDelivered();}
 function updateProductQty(i,val){productRows[i].qty=parseFloat(val)||1;updateWeightSummary();}
 function updateCustomPrice(i,val){productRows[i].customPrice=parseFloat(val);renderProductRows();}
 function setUnit(i,unit){productRows[i].unit=unit;renderProductRows();}
@@ -514,6 +603,7 @@ function searchContacts(){clearTimeout(searchTimeout);const q=document.getElemen
 function selectContact(el){const c={id:el.dataset.id,name:el.dataset.name,phone:el.dataset.phone,email:el.dataset.email};currentContact=c;document.getElementById('contact-search').value=c.name;document.getElementById('search-results').style.display='none';document.getElementById('selected-contact').style.display='block';document.getElementById('selected-contact-info').innerHTML=`<i class="ti ti-user-check"></i> <strong>${c.name}</strong>${c.phone?' - '+c.phone:''}`;document.getElementById('new-contact-form').style.display='none';document.getElementById('new-contact-toggle').style.display='none';}
 function toggleNewContact(){const form=document.getElementById('new-contact-form');const showing=form.style.display!=='none';form.style.display=showing?'none':'block';document.getElementById('new-contact-toggle').innerHTML=showing?'<i class="ti ti-user-plus"></i> Add new customer':'<i class="ti ti-x"></i> Cancel';if(showing)currentContact=null;}
 
+// ===== CONFIRM ORDER =====
 async function confirmOrder(){
   const btn=document.getElementById('confirm-btn');const msg=document.getElementById('order-msg');msg.style.display='none';
   if(!currentContact){const name=document.getElementById('nc-name').value.trim();if(!name){showMsg(msg,'err','Please select or add a customer.');return;}btn.disabled=true;btn.innerHTML='<span class="spinner"></span> Saving...';try{const r=await fetch('/api/contacts',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,phone:document.getElementById('nc-phone').value.trim(),email:document.getElementById('nc-email').value.trim()})});const d=await r.json();if(d.error)throw new Error(d.error);currentContact=d;}catch(e){showMsg(msg,'err','Could not create contact: '+e.message);btn.disabled=false;btn.innerHTML='<i class="ti ti-check"></i> Add to deliveries';return;}}
@@ -521,21 +611,25 @@ async function confirmOrder(){
   let addr='Ex Yard',zone='Ex Yard',zoneFee=0,truck='Ex Yard',date='',time='09:00',zoneProductDesc='';
   if(deliveryType==='delivered'){addr=document.getElementById('job-address').value.trim();if(!addr){showMsg(msg,'err','Please enter a delivery address.');return;}date=document.getElementById('delivery-date').value;time=document.getElementById('delivery-time').value;const totalT=productRows.reduce((s,r)=>s+getTonnes(r),0);const truckSel=document.getElementById('truck-select').value;const rec=totalT>0?autoTruck(totalT).name:'Hino 300';truck=truckSel==='auto'?rec:truckSel;const zInfo=detectZone(addr,truck);zone=zInfo?zInfo.zone:'Zone 6 - Quote';zoneFee=(zInfo&&includeZoneFee)?zInfo.fee:0;const isBig=truck==='Hino 700'||truck==='Hino 700 Truck and Trailer';const isSoil=hasSoilInOrder();zoneProductDesc=`${zone} - ${isBig?'Big':'Mini'} Truck${isSoil?' SOIL':''} Delivery`;}
   else{date=document.getElementById('exyard-date').value;time=document.getElementById('exyard-time').value;}
-  const lineItems=validRows.map(row=>{const p=PRODUCTS.find(x=>x.sku===row.sku);const m3=getM3(row);const basePrice=row.customPrice!==null?row.customPrice:(p?p.price:0);const qtyLabel=row.unit==='scoop'?`${row.qty} scoop${row.qty!==1?'s':''}`:`${m3.toFixed(2)}m3`;return{sku:row.sku,desc:`${p?p.name:row.sku} (${qtyLabel})`,qty:m3,price:basePrice,discount:tradeDiscount?10:0};});
-  const newDelivery={contactId:currentContact.id,contactName:currentContact.name,contactPhone:currentContact.phone||'',contactEmail:currentContact.email||'',jobAddress:addr,deliveryType,paymentType,tradeDiscount,date,time,notes:document.getElementById('delivery-notes').value.trim(),truck,zone,zoneFee,zoneProductDesc,lineItems,done:false,invoiced:false,xeroInvoiceId:null,xeroInvoiceNumber:null,paymentStatus:null,createdAt:new Date().toISOString()};
+  const lineItems=validRows.map(row=>{const p=PRODUCTS.find(x=>x.sku===row.sku);const m3=getM3(row);const basePrice=row.customPrice!==null?row.customPrice:(p?p.price:0);const qtyLabel=row.unit==='scoop'?`${row.qty} scoop${row.qty!==1?'s':''}`:`${m3.toFixed(2)}m3`;return{sku:row.sku,desc:`${p?p.name:row.sku} (${qtyLabel})`,qty:row.unit==='scoop'?row.qty:m3,unit:row.unit,price:basePrice,discount:tradeDiscount?10:0};});
+  const newDelivery={contactId:currentContact.id,contactName:currentContact.name,contactPhone:currentContact.phone||'',contactEmail:currentContact.email||'',jobAddress:addr,deliveryType,paymentType,tradeDiscount,accountType,date,time,notes:document.getElementById('delivery-notes').value.trim(),truck,zone,zoneFee,zoneProductDesc,lineItems,done:false,invoiced:false,xeroInvoiceId:null,xeroInvoiceNumber:null,paymentStatus:null,createdAt:new Date().toISOString()};
   btn.disabled=true;btn.innerHTML='<span class="spinner"></span> Saving...';
   try{
     const r=await fetch('/api/deliveries',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify(newDelivery)});
     const d=await r.json();if(d.error)throw new Error(d.error);
     deliveries.push(d.delivery);
   }catch(e){showMsg(msg,'err','Failed to save: '+e.message);btn.disabled=false;btn.innerHTML='<i class="ti ti-check"></i> Add to deliveries';return;}
-  productRows=[{sku:PRODUCTS[0]?.sku||'',qty:1,unit:'m3',customPrice:null,searchText:''}];currentContact=null;tradeDiscount=false;
+  // Reset form
+  productRows=[{sku:PRODUCTS[0]?.sku||'',qty:1,unit:PRODUCTS[0]?isM3Product(PRODUCTS[0].name)?'m3':'scoop':'scoop',customPrice:null,searchText:''}];
+  currentContact=null;tradeDiscount=false;
   document.getElementById('contact-search').value='';document.getElementById('job-address').value='';document.getElementById('zone-result').style.display='none';document.getElementById('address-suggestions').style.display='none';document.getElementById('selected-contact').style.display='none';document.getElementById('new-contact-form').style.display='none';document.getElementById('new-contact-toggle').style.display='inline-flex';document.getElementById('new-contact-toggle').innerHTML='<i class="ti ti-user-plus"></i> Add new customer';document.getElementById('delivery-notes').value='';document.getElementById('discount-toggle').textContent='Off';document.getElementById('discount-toggle').style.background='#fff';
-  setPaymentType('invoice');setDeliveryType('delivered');setDefaultDate();renderProductRows();includeZoneFee=true;const ztBtn=document.getElementById('zone-fee-toggle');if(ztBtn){ztBtn.textContent='On';ztBtn.style.background='#2563eb';}
+  setPaymentType('invoice');setDeliveryType('delivered');setAccountType('trade');setDefaultDate();renderProductRows();
+  includeZoneFee=true;const ztBtn=document.getElementById('zone-fee-toggle');if(ztBtn){ztBtn.textContent='On';ztBtn.style.background='#2563eb';}
   btn.disabled=false;btn.innerHTML='<i class="ti ti-check"></i> Add to deliveries';
-  showMsg(msg,'ok','Order added for '+newDelivery.contactName);updateStats();
+  showMsg(msg,'ok','Order added for '+newDelivery.contactName);updateStats();updateDailyTotal();
 }
 
+// ===== UPDATE / DELETE =====
 async function updateDelivery(d){
   try{await fetch('/api/deliveries/'+d.dbId,{method:'PUT',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)});}
   catch(e){console.error('Update error:',e);}
@@ -543,45 +637,99 @@ async function updateDelivery(d){
 async function deleteDelivery(dbId){
   if(!confirm('Delete this order?'))return;
   const id=parseInt(dbId);
-  try{await fetch('/api/deliveries/'+id,{method:'DELETE',credentials:'include'});deliveries=deliveries.filter(x=>x.dbId!==id);renderDeliveries();renderExYard();renderInvoiceList();renderArchive();updateStats();}
+  try{await fetch('/api/deliveries/'+id,{method:'DELETE',credentials:'include'});deliveries=deliveries.filter(x=>x.dbId!==id);renderDeliveries();renderExYard();renderInvoiceList();renderArchive();updateStats();updateDailyTotal();}
   catch(e){alert('Failed to delete');}
 }
-
 async function toggleDone(dbId){
-  const id=parseInt(dbId);
-  const d=deliveries.find(x=>x.dbId===id);
-  if(!d)return;
+  const id=parseInt(dbId);const d=deliveries.find(x=>x.dbId===id);if(!d)return;
   d.done=!d.done;
   if(d.done){d.doneAt=new Date().toISOString();d.doneBy=driverName||'Admin';}
   else{d.doneAt=null;d.doneBy=null;}
   await updateDelivery(d);
   renderDeliveries();renderExYard();renderDriverList();renderDriverOnly();renderArchive();updateStats();
 }
-
 async function checkPaymentStatus(dbId){
-  const id=parseInt(dbId);
-  const d=deliveries.find(x=>x.dbId===id);
-  if(!d||!d.xeroInvoiceId)return;
+  const id=parseInt(dbId);const d=deliveries.find(x=>x.dbId===id);if(!d||!d.xeroInvoiceId)return;
   const btns=document.querySelectorAll('#pay-btn-'+dbId);
   btns.forEach(b=>{b.disabled=true;b.innerHTML='<span class="spinner-sm"></span> Checking...';});
   try{
     const r=await fetch('/api/invoice-status/'+d.xeroInvoiceId,{credentials:'include'});
-    const data=await r.json();
-    if(data.error)throw new Error(data.error);
+    const data=await r.json();if(data.error)throw new Error(data.error);
     d.paymentStatus=data.paid?'paid':'unpaid';
     await updateDelivery(d);
     renderDeliveries();renderExYard();renderDriverList();renderDriverOnly();
   }catch(e){btns.forEach(b=>{b.disabled=false;b.innerHTML='<i class="ti ti-refresh"></i> Check payment';});alert('Could not check: '+e.message);}
 }
 
+// ===== EDIT ORDER =====
+function openEditOrder(dbId){
+  const id=parseInt(dbId);
+  const d=deliveries.find(x=>x.dbId===id);
+  if(!d)return;
+  editingDbId=id;
+  const body=document.getElementById('edit-modal-body');
+  body.innerHTML=`
+    <div class="form-group"><label>Customer</label><input type="text" id="edit-customer" value="${d.contactName}" readonly style="background:#f5f5f0"></div>
+    <div class="form-group"><label>Date</label><input type="date" id="edit-date" value="${d.date||''}"></div>
+    <div class="form-group"><label>Time</label><input type="time" id="edit-time" value="${d.time||'09:00'}"></div>
+    ${d.deliveryType==='delivered'?`<div class="form-group"><label>Address</label><input type="text" id="edit-address" value="${d.jobAddress||''}"></div>`:''}
+    <div class="form-group"><label>Truck</label>
+      <select id="edit-truck">
+        <option value="Hino 300" ${d.truck==='Hino 300'?'selected':''}>Hino 300</option>
+        <option value="Hino 700" ${d.truck==='Hino 700'?'selected':''}>Hino 700</option>
+        <option value="Hino 700 Truck and Trailer" ${d.truck==='Hino 700 Truck and Trailer'?'selected':''}>Hino 700 Truck and Trailer</option>
+        <option value="Ex Yard" ${d.truck==='Ex Yard'?'selected':''}>Ex Yard</option>
+      </select>
+    </div>
+    <div class="form-group"><label>Notes</label><input type="text" id="edit-notes" value="${d.notes||''}"></div>
+    <div class="section-hdr">Line items</div>
+    ${(d.lineItems||[]).map((li,i)=>`
+      <div style="padding:10px;background:#f9f9f7;border-radius:8px;margin-bottom:8px">
+        <div style="font-size:13px;font-weight:600;margin-bottom:6px">${li.desc}</div>
+        <div class="row">
+          <div class="form-group"><label>Qty</label><input type="number" id="edit-qty-${i}" value="${li.qty}" min="0.01" step="0.01"></div>
+          <div class="form-group"><label>Unit price $</label><input type="number" id="edit-price-${i}" value="${li.price}" min="0" step="0.01"></div>
+        </div>
+      </div>`).join('')}
+    <div class="form-group"><label>Delivery fee $</label><input type="number" id="edit-zonefee" value="${d.zoneFee||0}" min="0" step="0.01"></div>
+    <div id="edit-msg" class="alert" style="display:none"></div>
+    <button class="btn btn-primary btn-full" onclick="saveEditOrder()"><i class="ti ti-check"></i> Save changes</button>
+  `;
+  document.getElementById('edit-modal').style.display='flex';
+}
+function closeEditModal(e){
+  if(e&&e.target!==document.getElementById('edit-modal'))return;
+  document.getElementById('edit-modal').style.display='none';
+  editingDbId=null;
+}
+async function saveEditOrder(){
+  const d=deliveries.find(x=>x.dbId===editingDbId);if(!d)return;
+  const msg=document.getElementById('edit-msg');
+  d.date=document.getElementById('edit-date').value;
+  d.time=document.getElementById('edit-time').value;
+  if(d.deliveryType==='delivered')d.jobAddress=document.getElementById('edit-address').value;
+  d.truck=document.getElementById('edit-truck').value;
+  d.notes=document.getElementById('edit-notes').value;
+  d.zoneFee=parseFloat(document.getElementById('edit-zonefee').value)||0;
+  (d.lineItems||[]).forEach((li,i)=>{
+    li.qty=parseFloat(document.getElementById('edit-qty-'+i).value)||li.qty;
+    li.price=parseFloat(document.getElementById('edit-price-'+i).value)||li.price;
+  });
+  try{
+    await updateDelivery(d);
+    document.getElementById('edit-modal').style.display='none';
+    editingDbId=null;
+    renderDeliveries();renderExYard();renderInvoiceList();renderDriverList();renderArchive();updateStats();updateDailyTotal();
+  }catch(e){showMsg(msg,'err','Save failed: '+e.message);}
+}
+
+// ===== STATS =====
 function updateStats(){
-  // Deliveries stats (delivered type only)
   const delivs=deliveries.filter(d=>d.deliveryType==='delivered');
   const pendingDelivs=delivs.filter(d=>!d.done);
   document.getElementById('d-total').textContent=pendingDelivs.length;
   document.getElementById('d-done').textContent=delivs.filter(d=>d.done).length;
   document.getElementById('d-pending').textContent=pendingDelivs.filter(d=>!d.invoiced).length;
-  // Ex yard stats
   const exYards=deliveries.filter(d=>d.deliveryType==='exyard');
   document.getElementById('ey-total').textContent=exYards.length;
   document.getElementById('ey-done').textContent=exYards.filter(d=>d.done).length;
@@ -592,8 +740,9 @@ function filterDeliveries(f,el){deliveryFilter=f;document.querySelectorAll('#tab
 function truckBadge(truck){if(truck==='Hino 300')return'badge-h300';if(truck==='Hino 700')return'badge-h700';if(truck==='Hino 700 Truck and Trailer')return'badge-htt';return'badge-exyard';}
 function fmtDate(dateStr){if(!dateStr)return'';const d=new Date(dateStr+'T00:00:00');return d.toLocaleDateString('en-NZ',{weekday:'short',day:'numeric',month:'short'});}
 
-function deliveryCardHTML(d, showDoneBtn=true, showDelete=true, showPayCheck=true){
-  const total=(d.lineItems||[]).reduce((s,li)=>s+li.qty*(li.discount?li.price*(1-li.discount/100):li.price),0)+d.zoneFee;
+// ===== DELIVERY CARD =====
+function deliveryCardHTML(d,showDoneBtn=true,showDelete=true,showPayCheck=true,showEdit=false){
+  const total=orderTotal(d);
   const cardClass=d.paymentStatus==='paid'?'delivery-card paid-border':d.paymentStatus==='unpaid'?'delivery-card unpaid-border':'delivery-card';
   const doneLabel=d.deliveryType==='exyard'?'Mark collected':'Mark delivered';
   const undoLabel=d.deliveryType==='exyard'?'Undo collection':'Undo delivery';
@@ -621,78 +770,101 @@ function deliveryCardHTML(d, showDoneBtn=true, showDelete=true, showPayCheck=tru
       ${d.deliveryType==='delivered'?`<a href="https://maps.google.com/maps?q=${encodeURIComponent(d.jobAddress)}" target="_blank" class="btn btn-sm"><i class="ti ti-map-pin"></i> Navigate</a>`:''}
       ${d.contactPhone?`<a href="tel:${d.contactPhone}" class="btn btn-sm"><i class="ti ti-phone"></i> Call</a>`:''}
       ${showPayCheck&&d.invoiced&&d.xeroInvoiceId?`<button class="btn btn-sm" id="pay-btn-${d.dbId}" onclick="checkPaymentStatus('${d.dbId}')"><i class="ti ti-refresh"></i> Check payment</button>`:''}
+      ${showEdit?`<button class="btn btn-sm" onclick="openEditOrder('${d.dbId}')"><i class="ti ti-pencil"></i> Edit</button>`:''}
       ${showDelete?`<button class="btn btn-sm btn-danger" onclick="deleteDelivery('${d.dbId}')"><i class="ti ti-trash"></i></button>`:''}
     </div>
   </div>`;
 }
 
-// Deliveries tab — delivered type only, not done
 function renderDeliveries(){
   updateStats();
   const items=deliveries.filter(d=>d.deliveryType==='delivered'&&!d.done&&(deliveryFilter==='all'||d.truck===deliveryFilter)).sort((a,b)=>((a.date||'9999')+a.time).localeCompare((b.date||'9999')+b.time));
   const el=document.getElementById('deliveries-list');
   if(!items.length){el.innerHTML='<div class="empty"><i class="ti ti-truck-off"></i>No pending deliveries</div>';return;}
-  el.innerHTML=items.map(d=>deliveryCardHTML(d,true,true,true)).join('');
+  el.innerHTML=items.map(d=>deliveryCardHTML(d,true,true,true,true)).join('');
 }
 
-// Ex Yard tab — exyard type only, all (pending + done)
 function renderExYard(){
   updateStats();
   const pending=deliveries.filter(d=>d.deliveryType==='exyard'&&!d.done).sort((a,b)=>((a.date||'9999')+a.time).localeCompare((b.date||'9999')+b.time));
-  const done=deliveries.filter(d=>d.deliveryType==='exyard'&&d.done).sort((a,b)=>((b.doneAt||'')).localeCompare(a.doneAt||''));
+  const done=deliveries.filter(d=>d.deliveryType==='exyard'&&d.done).sort((a,b)=>(b.doneAt||'').localeCompare(a.doneAt||''));
   const el=document.getElementById('exyard-list');
   let html='';
-  if(pending.length){
-    html+=`<div class="section-hdr">Pending collection</div>`;
-    html+=pending.map(d=>deliveryCardHTML(d,true,true,true)).join('');
-  }
-  if(done.length){
-    html+=`<div class="section-hdr" style="margin-top:16px">Collected</div>`;
-    html+=done.map(d=>deliveryCardHTML(d,true,true,true)).join('');
-  }
+  if(pending.length){html+=`<div class="section-hdr">Pending collection</div>`;html+=pending.map(d=>deliveryCardHTML(d,true,true,true,true)).join('');}
+  if(done.length){html+=`<div class="section-hdr" style="margin-top:16px">Collected</div>`;html+=done.map(d=>deliveryCardHTML(d,true,true,true,true)).join('');}
   if(!pending.length&&!done.length){html='<div class="empty"><i class="ti ti-building-warehouse"></i>No ex yard orders</div>';}
   el.innerHTML=html;
 }
 
-// Invoice list — show all non-invoiced, non-eftpos orders (both delivered and ex yard)
-// Orders only leave this list once invoiced — delivery completion does NOT remove them
+// ===== INVOICE LIST — grouped by customer =====
 function renderInvoiceList(){
   const pending=deliveries.filter(d=>!d.invoiced&&d.paymentType!=='eftpos');
   const el=document.getElementById('invoice-list');
   if(!pending.length){el.innerHTML='<div class="empty"><i class="ti ti-file-check"></i>No orders to invoice</div>';document.getElementById('invoice-summary').style.display='none';return;}
-  el.innerHTML=pending.map(d=>{
-    const total=(d.lineItems||[]).reduce((s,li)=>s+li.qty*(li.discount?li.price*(1-li.discount/100):li.price),0)+d.zoneFee;
-    const sel=selectedForInvoice.has(d.dbId);
-    const statusLabel=d.done?(d.deliveryType==='exyard'?'<span class="badge badge-done" style="font-size:11px">Collected</span>':'<span class="badge badge-done" style="font-size:11px">Delivered</span>'):'<span class="badge badge-pending" style="font-size:11px">Pending</span>';
-    return`<div class="delivery-card ${sel?'selected':''}" onclick="toggleInvoiceSelect('${d.dbId}')">
-      <div style="display:flex;align-items:center;gap:10px">
-        <div style="width:22px;height:22px;border-radius:50%;border:2px solid ${sel?'#2d7a3a':'#ddd'};background:${sel?'#2d7a3a':'#fff'};display:flex;align-items:center;justify-content:center;flex-shrink:0">${sel?'<i class="ti ti-check" style="font-size:12px;color:#fff"></i>':''}</div>
-        <div style="flex:1">
-          <div class="delivery-name">${d.contactName}</div>
-          <div class="delivery-meta">${d.date?fmtDate(d.date)+' ':''} ${d.deliveryType==='exyard'?'Ex Yard':d.jobAddress}</div>
-          <div class="delivery-badges" style="margin-top:6px">
-            ${d.deliveryType==='delivered'?`<span class="badge ${truckBadge(d.truck)}">${d.truck}</span>`:'<span class="badge badge-exyard">Ex Yard</span>'}
-            ${d.deliveryType==='delivered'?`<span class="zone-pill">${d.zone} $${d.zoneFee}</span>`:''}
-            ${statusLabel}
-            <span style="font-weight:700">$${total.toFixed(0)}+GST</span>
-            ${d.tradeDiscount?'<span class="discount-badge">10%</span>':''}
+  // Group by contactId (fall back to contactName)
+  const groups={};
+  pending.forEach(d=>{
+    const key=d.contactId||d.contactName;
+    if(!groups[key])groups[key]={name:d.contactName,orders:[]};
+    groups[key].orders.push(d);
+  });
+  el.innerHTML=Object.values(groups).map(g=>{
+    const groupTotal=g.orders.reduce((s,d)=>s+orderTotal(d),0);
+    const selCount=g.orders.filter(d=>selectedForInvoice.has(d.dbId)).length;
+    const groupKey='cg-'+g.name.replace(/\s+/g,'-').replace(/[^a-zA-Z0-9-]/g,'');
+    const ordersHTML=g.orders.map(d=>{
+      const total=orderTotal(d);
+      const sel=selectedForInvoice.has(d.dbId);
+      const statusLabel=d.done?(d.deliveryType==='exyard'?'<span class="badge badge-done" style="font-size:11px">Collected</span>':'<span class="badge badge-done" style="font-size:11px">Delivered</span>'):'<span class="badge badge-pending" style="font-size:11px">Pending</span>';
+      return`<div class="delivery-card ${sel?'selected':''}" style="margin-bottom:8px" onclick="toggleInvoiceSelect('${d.dbId}')">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="width:22px;height:22px;border-radius:50%;border:2px solid ${sel?'#2d7a3a':'#ddd'};background:${sel?'#2d7a3a':'#fff'};display:flex;align-items:center;justify-content:center;flex-shrink:0">${sel?'<i class="ti ti-check" style="font-size:12px;color:#fff"></i>':''}</div>
+          <div style="flex:1">
+            <div class="delivery-meta" style="font-weight:600">${d.date?fmtDate(d.date)+' ':''} ${d.deliveryType==='exyard'?'Ex Yard':d.jobAddress}</div>
+            <div class="delivery-meta">${(d.lineItems||[]).map(li=>li.desc).join(', ')}</div>
+            <div class="delivery-badges" style="margin-top:6px">
+              ${d.deliveryType==='delivered'?`<span class="badge ${truckBadge(d.truck)}">${d.truck}</span>`:'<span class="badge badge-exyard">Ex Yard</span>'}
+              ${d.deliveryType==='delivered'&&d.zoneFee>0?`<span class="zone-pill">${d.zone} $${d.zoneFee}</span>`:''}
+              ${statusLabel}
+              <span style="font-weight:700">$${total.toFixed(0)}+GST</span>
+              ${d.tradeDiscount?'<span class="discount-badge">10%</span>':''}
+            </div>
           </div>
         </div>
+      </div>`;
+    }).join('');
+    return`<div class="customer-group">
+      <div class="customer-group-header" onclick="toggleCustomerGroup('${groupKey}')">
+        <h3><i class="ti ti-building" style="font-size:14px;margin-right:4px"></i>${g.name}</h3>
+        <div style="display:flex;align-items:center;gap:8px">
+          ${selCount>0?`<span class="badge badge-invoiced">${selCount} selected</span>`:''}
+          <span style="font-size:12px;color:#888">${g.orders.length} order${g.orders.length>1?'s':''} · $${groupTotal.toFixed(0)}+GST</span>
+          <i class="ti ti-chevron-down" style="font-size:14px;color:#888"></i>
+        </div>
       </div>
+      <div id="${groupKey}" class="customer-group-body open">${ordersHTML}</div>
     </div>`;
   }).join('');
   updateInvoiceSummary();
 }
 
+function toggleCustomerGroup(id){const el=document.getElementById(id);if(el)el.classList.toggle('open');}
 function toggleInvoiceSelect(dbId){const id=parseInt(dbId);if(selectedForInvoice.has(id))selectedForInvoice.delete(id);else selectedForInvoice.add(id);renderInvoiceList();}
-function updateInvoiceSummary(){const sel=deliveries.filter(d=>selectedForInvoice.has(d.dbId));const el=document.getElementById('invoice-summary');if(!sel.length){el.style.display='none';return;}const total=sel.reduce((s,d)=>(d.lineItems||[]).reduce((ss,li)=>ss+li.qty*(li.discount?li.price*(1-li.discount/100):li.price),0)+d.zoneFee+s,0);document.getElementById('invoice-summary-text').innerHTML=`<div style="font-size:14px"><strong>${[...new Set(sel.map(d=>d.contactName))].join(', ')}</strong> - ${sel.length} order${sel.length>1?'s':''}</div><div style="font-size:16px;font-weight:700;margin-top:8px;color:#2d7a3a">Total: $${total.toFixed(2)} + GST</div>`;el.style.display='block';}
+function updateInvoiceSummary(){
+  const sel=deliveries.filter(d=>selectedForInvoice.has(d.dbId));
+  const el=document.getElementById('invoice-summary');
+  if(!sel.length){el.style.display='none';return;}
+  const total=sel.reduce((s,d)=>s+orderTotal(d),0);
+  document.getElementById('invoice-summary-text').innerHTML=`<div style="font-size:14px"><strong>${[...new Set(sel.map(d=>d.contactName))].join(', ')}</strong> - ${sel.length} order${sel.length>1?'s':''}</div><div style="font-size:16px;font-weight:700;margin-top:8px;color:#2d7a3a">Total: $${total.toFixed(2)} + GST</div>`;
+  el.style.display='block';
+}
 
 async function createInvoice(){
   const sel=deliveries.filter(d=>selectedForInvoice.has(d.dbId));if(!sel.length)return;
   const btn=document.getElementById('create-inv-btn');const msg=document.getElementById('invoice-msg');msg.style.display='none';
   btn.disabled=true;btn.innerHTML='<span class="spinner"></span> Creating in Xero...';
   try{
-    const r=await fetch('/api/invoices',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({contactId:sel[0].contactId,contactName:sel[0].contactName,jobAddress:sel.map(d=>d.jobAddress).filter((v,i,a)=>a.indexOf(v)===i).join(', '),deliveries:sel})});
+    const r=await fetch('/api/invoices',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({contactId:sel[0].contactId,contactName:sel[0].contactName,jobAddress:sel.map(d=>d.jobAddress).filter((v,i,a)=>a.indexOf(v)===i).join(', '),accountType:sel[0].accountType||'trade',deliveries:sel})});
     const d=await r.json();if(d.error)throw new Error(d.error);
     for(const delivery of sel){delivery.invoiced=true;delivery.invoicedAt=new Date().toISOString();delivery.xeroInvoiceId=d.invoiceId;delivery.xeroInvoiceNumber=d.invoiceNumber;delivery.paymentStatus='unpaid';await updateDelivery(delivery);}
     selectedForInvoice.clear();
@@ -702,7 +874,7 @@ async function createInvoice(){
   btn.disabled=false;btn.innerHTML='<i class="ti ti-file-invoice"></i> Create draft invoice in Xero';
 }
 
-// Driver tab (admin view) — delivered type only, not done
+// ===== DRIVER =====
 function filterDriver(truck,el){driverFilter=truck;document.querySelectorAll('#tab-driver .tab').forEach(t=>t.classList.remove('active'));if(el)el.classList.add('active');renderDriverList();}
 function renderDriverList(){
   const items=deliveries.filter(d=>d.truck===driverFilter&&d.deliveryType==='delivered'&&!d.done);
@@ -714,11 +886,10 @@ function renderDriverList(){
     const dayItems=byDate[date].sort((a,b)=>(a.time||'').localeCompare(b.time||''));
     const isToday=date===today;
     const dayLabel=date==='unscheduled'?'Unscheduled':DAYS[new Date(date+'T00:00:00').getDay()]+' - '+fmtDate(date);
-    return`<div class="day-section"><div class="day-header" onclick="toggleDay('day-${date}')"><h3>${dayLabel}${isToday?' ⭐':''}</h3><span style="font-size:12px;color:#888">${dayItems.length} stops <i class="ti ti-chevron-down"></i></span></div><div id="day-${date}" class="day-body${isToday?' open':''}">${dayItems.map(d=>deliveryCardHTML(d,true,true,true)).join('')}</div></div>`;
+    return`<div class="day-section"><div class="day-header" onclick="toggleDay('day-${date}')"><h3>${dayLabel}${isToday?' ⭐':''}</h3><span style="font-size:12px;color:#888">${dayItems.length} stops <i class="ti ti-chevron-down"></i></span></div><div id="day-${date}" class="day-body${isToday?' open':''}">${dayItems.map(d=>deliveryCardHTML(d,true,true,true,false)).join('')}</div></div>`;
   }).join('');
 }
 
-// Driver-only view — delivered type only, not done
 let driverOnlyFilter='all';
 function filterDriverOnly(truck,el){driverOnlyFilter=truck;document.querySelectorAll('#tab-driver-only .tab').forEach(t=>t.classList.remove('active'));if(el)el.classList.add('active');renderDriverOnly();}
 function renderDriverOnly(){
@@ -731,13 +902,14 @@ function renderDriverOnly(){
     const dayItems=byDate[date].sort((a,b)=>(a.time||'').localeCompare(b.time||''));
     const isToday=date===today;
     const dayLabel=date==='unscheduled'?'Unscheduled':DAYS[new Date(date+'T00:00:00').getDay()]+' - '+fmtDate(date);
-    return`<div class="day-section"><div class="day-header" onclick="toggleDay('dday-${date}')"><h3>${dayLabel}${isToday?' ⭐':''}</h3><span style="font-size:12px;color:#888">${dayItems.length} stops <i class="ti ti-chevron-down"></i></span></div><div id="dday-${date}" class="day-body${isToday?' open':''}">${dayItems.map(d=>deliveryCardHTML(d,true,false,true)).join('')}</div></div>`;
+    return`<div class="day-section"><div class="day-header" onclick="toggleDay('dday-${date}')"><h3>${dayLabel}${isToday?' ⭐':''}</h3><span style="font-size:12px;color:#888">${dayItems.length} stops <i class="ti ti-chevron-down"></i></span></div><div id="dday-${date}" class="day-body${isToday?' open':''}">${dayItems.map(d=>deliveryCardHTML(d,true,false,true,false)).join('')}</div></div>`;
   }).join('');
 }
 
 function toggleDay(id){const el=document.getElementById(id);if(el)el.classList.toggle('open');}
 function getWeekLabel(dateStr){const d=new Date(dateStr||Date.now());d.setHours(0,0,0,0);d.setDate(d.getDate()+4-(d.getDay()||7));const yearStart=new Date(d.getFullYear(),0,1);const week=Math.ceil((((d-yearStart)/86400000)+1)/7);return{week,year:d.getFullYear(),key:`${d.getFullYear()}-W${String(week).padStart(2,'0')}`};}
 
+// ===== ARCHIVE =====
 function renderArchive(){
   const done=deliveries.filter(d=>d.done);
   const el=document.getElementById('archive-list');
@@ -745,11 +917,34 @@ function renderArchive(){
   const byWeek={};done.forEach(d=>{const {week,year,key}=getWeekLabel(d.doneAt||d.createdAt);if(!byWeek[key])byWeek[key]={week,year,items:[]};byWeek[key].items.push(d);});
   el.innerHTML=Object.keys(byWeek).sort().reverse().map(key=>{
     const {week,year,items}=byWeek[key];
-    const total=items.reduce((s,d)=>(d.lineItems||[]).reduce((ss,li)=>ss+li.qty*(li.discount?li.price*(1-li.discount/100):li.price),0)+d.zoneFee+s,0);
-    return`<div class="week-section"><div class="week-header" onclick="toggleWeek('week-${key}')"><h3>Week ${week}, ${year}</h3><span style="font-size:12px;color:#888">${items.length} orders · $${total.toFixed(0)}+GST <i class="ti ti-chevron-down"></i></span></div><div id="week-${key}" class="week-body">${items.map(d=>{const tot=(d.lineItems||[]).reduce((s,li)=>s+li.qty*(li.discount?li.price*(1-li.discount/100):li.price),0)+d.zoneFee;return`<div class="delivery-card" style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;align-items:flex-start"><div><div class="delivery-name">${d.contactName}</div><div class="delivery-meta">${d.date?fmtDate(d.date)+' ':''} ${d.deliveryType==='exyard'?'Ex Yard':d.jobAddress}</div><div class="delivery-meta">${(d.lineItems||[]).map(li=>li.desc).join(', ')}</div>${d.doneBy?`<div class="done-by">✓ ${d.deliveryType==='exyard'?'Collected':'Delivered'} by ${d.doneBy}</div>`:''}<div class="delivery-badges" style="margin-top:6px"><span class="badge ${d.invoiced?'badge-invoiced':'badge-eftpos'}">${d.invoiced?'Invoiced':'EFTPOS'}</span>${d.paymentStatus==='paid'?'<span class="payment-status payment-paid"><i class="ti ti-circle-check"></i> Paid</span>':''}</div></div><div style="text-align:right"><div style="font-weight:700">$${tot.toFixed(0)}</div><div style="display:flex;flex-direction:column;gap:4px;margin-top:6px;align-items:flex-end"><button class="btn btn-sm" onclick="toggleDone('${d.dbId}')" title="Move back to active"><i class="ti ti-rotate-clockwise"></i> Undo</button><button class="btn btn-sm btn-danger" onclick="deleteDelivery('${d.dbId}')"><i class="ti ti-trash"></i></button></div></div></div></div>`;}).join('')}</div></div>`;
+    const total=items.reduce((s,d)=>s+orderTotal(d),0);
+    return`<div class="week-section"><div class="week-header" onclick="toggleWeek('week-${key}')"><h3>Week ${week}, ${year}</h3><span style="font-size:12px;color:#888">${items.length} orders · $${total.toFixed(0)}+GST <i class="ti ti-chevron-down"></i></span></div><div id="week-${key}" class="week-body">${items.map(d=>{const tot=orderTotal(d);return`<div class="delivery-card" style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;align-items:flex-start"><div style="flex:1"><div class="delivery-name">${d.contactName}</div><div class="delivery-meta">${d.date?fmtDate(d.date)+' ':''} ${d.deliveryType==='exyard'?'Ex Yard':d.jobAddress}</div><div class="delivery-meta">${(d.lineItems||[]).map(li=>li.desc).join(', ')}</div>${d.doneBy?`<div class="done-by">✓ ${d.deliveryType==='exyard'?'Collected':'Delivered'} by ${d.doneBy}</div>`:''}<div class="delivery-badges" style="margin-top:6px"><span class="badge ${d.invoiced?'badge-invoiced':'badge-eftpos'}">${d.invoiced?'Invoiced':'EFTPOS'}</span>${d.paymentStatus==='paid'?'<span class="payment-status payment-paid"><i class="ti ti-circle-check"></i> Paid</span>':''}</div></div><div style="text-align:right;flex-shrink:0"><div style="font-weight:700">$${tot.toFixed(0)}</div><div style="display:flex;flex-direction:column;gap:4px;margin-top:6px;align-items:flex-end"><button class="btn btn-sm" onclick="toggleDone('${d.dbId}')" title="Move back to active"><i class="ti ti-rotate-clockwise"></i> Undo</button><button class="btn btn-sm btn-danger" onclick="deleteDelivery('${d.dbId}')"><i class="ti ti-trash"></i></button></div></div></div></div>`;}).join('')}</div></div>`;
   }).join('');
 }
 function toggleWeek(id){const el=document.getElementById(id);if(el)el.classList.toggle('open');}
+
+// ===== CSV EXPORT =====
+function exportCSV(){
+  const headers=['ID','Date','Customer','Phone','Email','Type','Address','Zone','Truck','Products','Notes','Zone Fee','Total','Payment','Invoiced','Invoice#','Payment Status','Done','Done By','Done At','Created At'];
+  const rows=deliveries.map(d=>{
+    const total=orderTotal(d);
+    return[
+      d.dbId,d.date||'',d.contactName,d.contactPhone||'',d.contactEmail||'',
+      d.deliveryType,d.jobAddress||'',d.zone||'',d.truck||'',
+      (d.lineItems||[]).map(li=>li.desc).join(' | '),
+      d.notes||'',d.zoneFee||0,total.toFixed(2),
+      d.paymentType,d.invoiced?'Yes':'No',d.xeroInvoiceNumber||'',
+      d.paymentStatus||'',d.done?'Yes':'No',d.doneBy||'',d.doneAt||'',d.createdAt||''
+    ].map(v=>'"'+String(v).replace(/"/g,'""')+'"');
+  });
+  const csv=[headers.map(h=>'"'+h+'"').join(','),...rows.map(r=>r.join(','))].join('\n');
+  const blob=new Blob([csv],{type:'text/csv'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download='mainscape-deliveries-'+new Date().toISOString().split('T')[0]+'.csv';
+  a.click();URL.revokeObjectURL(url);
+}
+
 function showMsg(el,type,text){el.className='alert alert-'+(type==='ok'?'ok':'err');el.textContent=text;el.style.display='block';if(type==='ok')setTimeout(()=>el.style.display='none',4000);}
 window.addEventListener('DOMContentLoaded',checkAuth);
 </script>
