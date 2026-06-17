@@ -222,7 +222,9 @@ function fmtDateForInvoice(dateStr) {
 app.post('/api/invoices', async (req, res) => {
   try {
     const { access_token, tenant_id } = await getValidToken();
-    const { contactId, contactName, deliveries, jobAddress } = req.body;
+    const { contactId, contactName, deliveries, jobAddress, accountType } = req.body;
+    // Account codes: 204 = Trade Sales, 203 = Retail Sales
+    const accountCode = accountType === 'retail' ? '203' : '204';
     const lineItems = [];
 
     for (const d of deliveries) {
@@ -230,10 +232,12 @@ app.post('/api/invoices', async (req, res) => {
       const dateLabel = fmtDateForInvoice(d.date);
       const addressLabel = d.deliveryType === 'delivered' ? d.jobAddress : 'Ex Yard';
       const prefix = [dateLabel, addressLabel].filter(Boolean).join(' - ');
+      // Use per-delivery accountType if available, else fall back to invoice-level
+      const deliveryAccountCode = d.accountType === 'retail' ? '203' : accountCode;
 
       for (const li of (d.lineItems || [])) {
         const desc = prefix ? `${prefix} | ${li.desc}` : li.desc;
-        const item = { Description: desc, Quantity: li.qty, UnitAmount: li.price };
+        const item = { Description: desc, Quantity: li.qty, UnitAmount: li.price, AccountCode: deliveryAccountCode };
         if (li.discount && li.discount > 0) item.DiscountRate = li.discount;
         lineItems.push(item);
       }
@@ -242,7 +246,7 @@ app.post('/api/invoices', async (req, res) => {
         const deliveryDesc = prefix
           ? `${prefix} | ${d.zoneProductDesc || `Delivery - ${d.zone} (${d.truck})`}`
           : (d.zoneProductDesc || `Delivery - ${d.zone} (${d.truck})`);
-        lineItems.push({ Description: deliveryDesc, Quantity: 1, UnitAmount: d.zoneFee });
+        lineItems.push({ Description: deliveryDesc, Quantity: 1, UnitAmount: d.zoneFee, AccountCode: deliveryAccountCode });
       }
     }
 
