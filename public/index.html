@@ -942,6 +942,13 @@ function exportCSV(){
 }
 
 function showMsg(el,type,text){el.className='alert alert-'+(type==='ok'?'ok':'err');el.textContent=text;el.style.display='block';if(type==='ok')setTimeout(()=>el.style.display='none',4000);}
+// Refresh at midnight so daily total resets for new day
+let _lastDate=new Date().toISOString().split('T')[0];
+setInterval(()=>{
+  const today=new Date().toISOString().split('T')[0];
+  if(today!==_lastDate){_lastDate=today;if(userRole==='admin')loadDeliveries();}
+},60000);
+
 window.addEventListener('DOMContentLoaded',checkAuth);
 </script>
 </body>
