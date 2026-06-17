@@ -19,7 +19,6 @@ const DRIVER_PIN = process.env.DRIVER_PIN || '2026';
 async function getDb() {
   const client = new Client({ connectionString: process.env.DATABASE_URL });
   await client.connect();
-  // Create tables if they don't exist
   await client.query(`
     CREATE TABLE IF NOT EXISTS xero_tokens (
       id INTEGER PRIMARY KEY DEFAULT 1,
@@ -213,21 +212,40 @@ app.post('/api/contacts', async (req, res) => {
 });
 
 // ===== INVOICES =====
+// Helper to format date as "Mon 17 Jun 2026"
+function fmtDateForInvoice(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr + 'T00:00:00');
+  return d.toLocaleDateString('en-NZ', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+}
+
 app.post('/api/invoices', async (req, res) => {
   try {
     const { access_token, tenant_id } = await getValidToken();
     const { contactId, contactName, deliveries, jobAddress } = req.body;
     const lineItems = [];
+
     for (const d of deliveries) {
+      // Build prefix: "Wed 17 Jun 2026 - 12 Main St, Lincoln" or just date for ex yard
+      const dateLabel = fmtDateForInvoice(d.date);
+      const addressLabel = d.deliveryType === 'delivered' ? d.jobAddress : 'Ex Yard';
+      const prefix = [dateLabel, addressLabel].filter(Boolean).join(' - ');
+
       for (const li of (d.lineItems || [])) {
-        const item = { Description: li.desc, Quantity: li.qty, UnitAmount: li.price };
+        const desc = prefix ? `${prefix} | ${li.desc}` : li.desc;
+        const item = { Description: desc, Quantity: li.qty, UnitAmount: li.price };
         if (li.discount && li.discount > 0) item.DiscountRate = li.discount;
         lineItems.push(item);
       }
+
       if (d.zoneFee > 0 && d.deliveryType === 'delivered') {
-        lineItems.push({ Description: d.zoneProductDesc || `Delivery - ${d.zone} (${d.truck})`, Quantity: 1, UnitAmount: d.zoneFee });
+        const deliveryDesc = prefix
+          ? `${prefix} | ${d.zoneProductDesc || `Delivery - ${d.zone} (${d.truck})`}`
+          : (d.zoneProductDesc || `Delivery - ${d.zone} (${d.truck})`);
+        lineItems.push({ Description: deliveryDesc, Quantity: 1, UnitAmount: d.zoneFee });
       }
     }
+
     const response = await axios.post('https://api.xero.com/api.xro/2.0/Invoices',
       { Invoices: [{ Type: 'ACCREC', Status: 'DRAFT', Contact: contactId ? { ContactID: contactId } : { Name: contactName }, Reference: jobAddress, LineItems: lineItems }] },
       { headers: { Authorization: `Bearer ${access_token}`, 'Xero-tenant-id': tenant_id, 'Content-Type': 'application/json', Accept: 'application/json' } }
