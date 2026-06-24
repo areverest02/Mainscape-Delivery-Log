@@ -250,8 +250,15 @@ app.post('/api/invoices', async (req, res) => {
       }
     }
 
+    // Use the most recent delivery date as the invoice date
+    const invoiceDate = deliveries
+      .map(d => d.date)
+      .filter(Boolean)
+      .sort()
+      .pop() || new Date().toISOString().slice(0, 10);
+
     const response = await axios.post('https://api.xero.com/api.xro/2.0/Invoices',
-      { Invoices: [{ Type: 'ACCREC', Status: 'DRAFT', Contact: contactId ? { ContactID: contactId } : { Name: contactName }, Reference: jobAddress, LineItems: lineItems }] },
+      { Invoices: [{ Type: 'ACCREC', Status: 'DRAFT', Contact: contactId ? { ContactID: contactId } : { Name: contactName }, Reference: jobAddress, LineItems: lineItems, Date: invoiceDate }] },
       { headers: { Authorization: `Bearer ${access_token}`, 'Xero-tenant-id': tenant_id, 'Content-Type': 'application/json', Accept: 'application/json' } }
     );
     const inv = response.data.Invoices?.[0];
