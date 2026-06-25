@@ -246,7 +246,9 @@ app.post('/api/invoices', async (req, res) => {
         const deliveryDesc = prefix
           ? `${prefix} | ${d.zoneProductDesc || `Delivery - ${d.zone} (${d.truck})`}`
           : (d.zoneProductDesc || `Delivery - ${d.zone} (${d.truck})`);
-        lineItems.push({ Description: deliveryDesc, Quantity: 1, UnitAmount: d.zoneFee, AccountCode: deliveryAccountCode });
+        const zoneLine = { Description: deliveryDesc, Quantity: 1, UnitAmount: d.zoneFee, AccountCode: deliveryAccountCode };
+        if (d.zoneProductSku) zoneLine.ItemCode = d.zoneProductSku;
+        lineItems.push(zoneLine);
 
         // FAF - Temporary Fuel Factor 16% of zone fee
         const fafAmount = Math.round(d.zoneFee * 0.16 * 100) / 100;
