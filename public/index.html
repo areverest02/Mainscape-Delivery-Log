@@ -216,10 +216,7 @@ input:focus, select:focus { outline: none; border-color: #2d7a3a; }
       </div>
       <div class="section-hdr">Products</div>
       <div class="card">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;padding:10px;background:#fffbeb;border-radius:8px;border:1px solid #fcd34d">
-          <div><div style="font-size:13px;font-weight:600;color:#92400e">Trade discount (10%)</div><div style="font-size:12px;color:#b45309">Products only — shown on Xero invoice</div></div>
-          <button id="discount-toggle" onclick="toggleDiscount()" style="padding:6px 14px;border-radius:20px;border:1px solid #fcd34d;background:#fff;font-size:13px;font-weight:600;color:#92400e;cursor:pointer;font-family:inherit">Off</button>
-        </div>
+
         <div id="products-loading" class="muted" style="text-align:center;padding:12px">Loading products from Xero...</div>
         <div id="product-rows" style="display:none"></div>
         <button class="btn btn-sm" onclick="addProductRow()" id="add-product-btn" style="display:none;margin-top:4px"><i class="ti ti-plus"></i> Add product</button>
@@ -385,9 +382,9 @@ function isScreenedSoilDelivered(name){return name.toLowerCase().includes('scree
 
 let PRODUCTS=[];
 let deliveries=[];
-let currentContact=null,deliveryType='delivered',paymentType='invoice',tradeDiscount=false,accountType='trade';
+let currentContact=null,deliveryType='delivered',paymentType='invoice',accountType='trade';
 let driverFilter='Hino 300',deliveryFilter='all',selectedForInvoice=new Set();
-let productRows=[{sku:'',qty:1,unit:'m3',customPrice:null,searchText:''}];
+let productRows=[{sku:'',qty:1,unit:'m3',customPrice:null,searchText:'',discount:false}];
 let userRole=null,driverName=null,includeZoneFee=true;
 let editingDbId=null;
 
@@ -523,7 +520,7 @@ function toggleZoneFee(){
   btn.style.background=includeZoneFee?'#2563eb':'#9ca3af';
   detectZoneFromInput();
 }
-function toggleDiscount(){tradeDiscount=!tradeDiscount;const btn=document.getElementById('discount-toggle');btn.textContent=tradeDiscount?'On — 10% off':'Off';btn.style.background=tradeDiscount?'#fef3c7':'#fff';renderProductRows();}
+
 
 // ===== PRODUCT ROWS =====
 function checkScreenedSoilDelivered(){
@@ -543,7 +540,7 @@ function renderProductRows(){
   el.innerHTML=productRows.map((row,i)=>{
     const p=PRODUCTS.find(x=>x.sku===row.sku);
     const basePrice=row.customPrice!==null?row.customPrice:(p?p.price:0);
-    const discountedPrice=tradeDiscount?+(basePrice*0.9).toFixed(2):basePrice;
+    const discountedPrice=row.discount?+(basePrice*0.9).toFixed(2):basePrice;
     return`<div class="product-row">
       <div style="width:100%;position:relative">
         <input type="text" placeholder="Search product..." value="${row.searchText||p?.name||''}" oninput="filterProducts(${i},this.value)" onfocus="showProductDropdown(${i})" style="width:100%;font-size:13px;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-family:inherit">
@@ -559,7 +556,8 @@ function renderProductRows(){
           <div style="font-size:11px;color:#888;margin-bottom:2px">Unit price $</div>
           <input type="number" style="font-size:13px" min="0" step="0.01" value="${basePrice}" onchange="updateCustomPrice(${i},this.value)">
         </div>
-        ${tradeDiscount?`<span class="discount-badge">-10% = $${discountedPrice}</span>`:''}
+        <button onclick="toggleRowDiscount(${i})" style="padding:5px 10px;font-size:11px;font-weight:600;border-radius:20px;border:1px solid ${row.discount?'#fcd34d':'#ddd'};background:${row.discount?'#fef3c7':'#fff'};color:${row.discount?'#92400e':'#aaa'};cursor:pointer;font-family:inherit;white-space:nowrap">${row.discount?'−10%':'10%'}</button>
+        ${row.discount?`<span class="discount-badge">= $${discountedPrice}</span>`:''}
         ${productRows.length>1?`<button style="padding:5px 8px;font-size:12px;border:1px solid #c0392b;border-radius:8px;background:#fff;color:#c0392b;cursor:pointer" onclick="removeProductRow(${i})"><i class="ti ti-x"></i></button>`:''}
       </div>
     </div>`;
@@ -583,8 +581,9 @@ function selectProduct(i,sku){
   checkScreenedSoilDelivered();
 }
 document.addEventListener('click',e=>{if(!e.target.closest('.product-dropdown')&&!e.target.closest('input[onfocus]'))document.querySelectorAll('.product-dropdown').forEach(d=>d.style.display='none');});
-function addProductRow(){productRows.push({sku:'',qty:1,unit:'scoop',customPrice:null,searchText:''});renderProductRows();}
+function addProductRow(){productRows.push({sku:'',qty:1,unit:'scoop',customPrice:null,searchText:'',discount:false});renderProductRows();}
 function removeProductRow(i){productRows.splice(i,1);renderProductRows();checkScreenedSoilDelivered();}
+function toggleRowDiscount(i){productRows[i].discount=!productRows[i].discount;renderProductRows();}
 function updateProductQty(i,val){productRows[i].qty=parseFloat(val)||1;updateWeightSummary();}
 function updateCustomPrice(i,val){productRows[i].customPrice=parseFloat(val);renderProductRows();}
 function setUnit(i,unit){productRows[i].unit=unit;renderProductRows();}
@@ -611,8 +610,8 @@ async function confirmOrder(){
   let addr='Ex Yard',zone='Ex Yard',zoneFee=0,truck='Ex Yard',date='',time='09:00',zoneProductDesc='',zoneProductSku='';
   if(deliveryType==='delivered'){addr=document.getElementById('job-address').value.trim();if(!addr){showMsg(msg,'err','Please enter a delivery address.');return;}date=document.getElementById('delivery-date').value;time=document.getElementById('delivery-time').value;const totalT=productRows.reduce((s,r)=>s+getTonnes(r),0);const truckSel=document.getElementById('truck-select').value;const rec=totalT>0?autoTruck(totalT).name:'Hino 300';truck=truckSel==='auto'?rec:truckSel;const zInfo=detectZone(addr,truck);zone=zInfo?zInfo.zone:'Zone 6 - Quote';zoneFee=(zInfo&&includeZoneFee)?zInfo.fee:0;const isBig=truck==='Hino 700'||truck==='Hino 700 Truck and Trailer';const isSoil=hasSoilInOrder();zoneProductDesc=`${zone} - ${isBig?'Big':'Mini'} Truck${isSoil?' SOIL':''} Delivery`;const zoneProduct=PRODUCTS.find(p=>p.name.toLowerCase()===zoneProductDesc.toLowerCase());zoneProductSku=zoneProduct?zoneProduct.sku:'';}
   else{date=document.getElementById('exyard-date').value;time=document.getElementById('exyard-time').value;}
-  const lineItems=validRows.map(row=>{const p=PRODUCTS.find(x=>x.sku===row.sku);const m3=getM3(row);const basePrice=row.customPrice!==null?row.customPrice:(p?p.price:0);const qtyLabel=row.unit==='scoop'?`${row.qty} scoop${row.qty!==1?'s':''}`:`${m3.toFixed(2)}m3`;return{sku:row.sku,desc:`${p?p.name:row.sku} (${qtyLabel})`,qty:row.unit==='scoop'?row.qty:m3,unit:row.unit,price:basePrice,discount:tradeDiscount?10:0};});
-  const newDelivery={contactId:currentContact.id,contactName:currentContact.name,contactPhone:currentContact.phone||'',contactEmail:currentContact.email||'',jobAddress:addr,deliveryType,paymentType,tradeDiscount,accountType,date,time,notes:document.getElementById('delivery-notes').value.trim(),truck,zone,zoneFee,zoneProductDesc,zoneProductSku,lineItems,done:false,invoiced:false,xeroInvoiceId:null,xeroInvoiceNumber:null,paymentStatus:null,createdAt:new Date().toISOString()};
+  const lineItems=validRows.map(row=>{const p=PRODUCTS.find(x=>x.sku===row.sku);const m3=getM3(row);const basePrice=row.customPrice!==null?row.customPrice:(p?p.price:0);const qtyLabel=row.unit==='scoop'?`${row.qty} scoop${row.qty!==1?'s':''}`:`${m3.toFixed(2)}m3`;return{sku:row.sku,desc:`${p?p.name:row.sku} (${qtyLabel})`,qty:row.unit==='scoop'?row.qty:m3,unit:row.unit,price:basePrice,discount:row.discount?10:0};});
+  const newDelivery={contactId:currentContact.id,contactName:currentContact.name,contactPhone:currentContact.phone||'',contactEmail:currentContact.email||'',jobAddress:addr,deliveryType,paymentType,tradeDiscount:validRows.some(r=>r.discount),accountType,date,time,notes:document.getElementById('delivery-notes').value.trim(),truck,zone,zoneFee,zoneProductDesc,zoneProductSku,lineItems,done:false,invoiced:false,xeroInvoiceId:null,xeroInvoiceNumber:null,paymentStatus:null,createdAt:new Date().toISOString()};
   btn.disabled=true;btn.innerHTML='<span class="spinner"></span> Saving...';
   try{
     const r=await fetch('/api/deliveries',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify(newDelivery)});
@@ -620,9 +619,9 @@ async function confirmOrder(){
     deliveries.push(d.delivery);
   }catch(e){showMsg(msg,'err','Failed to save: '+e.message);btn.disabled=false;btn.innerHTML='<i class="ti ti-check"></i> Add to deliveries';return;}
   // Reset form
-  productRows=[{sku:'',qty:1,unit:'m3',customPrice:null,searchText:''}];
-  currentContact=null;tradeDiscount=false;
-  document.getElementById('contact-search').value='';document.getElementById('job-address').value='';document.getElementById('zone-result').style.display='none';document.getElementById('address-suggestions').style.display='none';document.getElementById('selected-contact').style.display='none';document.getElementById('new-contact-form').style.display='none';document.getElementById('new-contact-toggle').style.display='inline-flex';document.getElementById('new-contact-toggle').innerHTML='<i class="ti ti-user-plus"></i> Add new customer';document.getElementById('delivery-notes').value='';document.getElementById('discount-toggle').textContent='Off';document.getElementById('discount-toggle').style.background='#fff';
+  productRows=[{sku:'',qty:1,unit:'m3',customPrice:null,searchText:'',discount:false}];
+  currentContact=null;
+  document.getElementById('contact-search').value='';document.getElementById('job-address').value='';document.getElementById('zone-result').style.display='none';document.getElementById('address-suggestions').style.display='none';document.getElementById('selected-contact').style.display='none';document.getElementById('new-contact-form').style.display='none';document.getElementById('new-contact-toggle').style.display='inline-flex';document.getElementById('new-contact-toggle').innerHTML='<i class="ti ti-user-plus"></i> Add new customer';document.getElementById('delivery-notes').value='';
   setPaymentType('invoice');setDeliveryType('delivered');setAccountType('trade');setDefaultDate();renderProductRows();
   includeZoneFee=true;const ztBtn=document.getElementById('zone-fee-toggle');if(ztBtn){ztBtn.textContent='On';ztBtn.style.background='#2563eb';}
   btn.disabled=false;btn.innerHTML='<i class="ti ti-check"></i> Add to deliveries';
