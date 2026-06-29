@@ -223,6 +223,8 @@ app.post('/api/invoices', async (req, res) => {
   try {
     const { access_token, tenant_id } = await getValidToken();
     const { contactId, contactName, deliveries, jobAddress, accountType } = req.body;
+    // Build reference from notes across all deliveries (unique, non-empty)
+    const reference = [...new Set(deliveries.map(d => d.notes).filter(Boolean))].join(', ');
     // Account codes: 204 = Trade Sales, 203 = Retail Sales
     const accountCode = accountType === 'retail' ? '203' : '204';
     const lineItems = [];
@@ -265,7 +267,7 @@ app.post('/api/invoices', async (req, res) => {
       .pop() || new Date().toISOString().slice(0, 10);
 
     const response = await axios.post('https://api.xero.com/api.xro/2.0/Invoices',
-      { Invoices: [{ Type: 'ACCREC', Status: 'DRAFT', Contact: contactId ? { ContactID: contactId } : { Name: contactName }, Reference: jobAddress, LineItems: lineItems, Date: invoiceDate }] },
+      { Invoices: [{ Type: 'ACCREC', Status: 'DRAFT', Contact: contactId ? { ContactID: contactId } : { Name: contactName }, Reference: reference || undefined, LineItems: lineItems, Date: invoiceDate }] },
       { headers: { Authorization: `Bearer ${access_token}`, 'Xero-tenant-id': tenant_id, 'Content-Type': 'application/json', Accept: 'application/json' } }
     );
     const inv = response.data.Invoices?.[0];
